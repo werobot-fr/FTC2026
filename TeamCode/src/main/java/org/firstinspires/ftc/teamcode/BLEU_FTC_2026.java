@@ -49,12 +49,7 @@ import com.qualcomm.robotcore.util.Range;
 @Autonomous
 
 public class BLEU_FTC_2026 extends LinearOpMode {
-    
-    
-    
-    
-    
-    
+
     private IMU imu = null; 
     private DcMotorEx arriereGauche = null;
     private DcMotorEx arriereDroit = null;
@@ -320,10 +315,10 @@ public class BLEU_FTC_2026 extends LinearOpMode {
             vitesseRoueARD /= max;
         }
         
-        avantGauche.setPower(vitesseRoueAVG);
-        avantDroit.setPower(vitesseRoueAVD);
-        arriereGauche.setPower(vitesseRoueARG);
-        arriereDroit.setPower(vitesseRoueARD);
+        avantGauche.setVelocity(vitesseRoueAVG*VITESSE_MAX_MOTEUR);
+        avantDroit.setVelocity(vitesseRoueAVD*VITESSE_MAX_MOTEUR);
+        arriereGauche.setVelocity(vitesseRoueARG*VITESSE_MAX_MOTEUR);
+        arriereDroit.setVelocity(vitesseRoueARD*VITESSE_MAX_MOTEUR);
      }
     
     
