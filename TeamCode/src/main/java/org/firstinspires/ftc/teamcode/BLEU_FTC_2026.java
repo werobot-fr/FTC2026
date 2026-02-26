@@ -410,6 +410,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
             double vitesseRoueAVG, vitesseRoueAVD, vitesseRoueARG, vitesseRoueARD;
 
             myAprilTagDetections = (myAprilTagProcessor.getDetections());
+            int nbNotFound = 0;
 
             // etape = State.FIN;
 
@@ -442,6 +443,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
                   }
                   if (!ordre.isEmpty()){
                         etape = State.SE_PLACER;
+
                     }
                   telemetry.update();
                   break;
@@ -491,6 +493,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
                     else {
                         telemetry.addLine("Recherche du Tag ...");
                         //stopMoving();
+                        nbNotFound +=1;
                         moveRobot(x*0.7,y*0.7,z*0.7);
                     }
                     telemetry.update();
@@ -503,6 +506,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
 
                 case FIN:
                     telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f",x,y,z));
+                    telemetry.addData("nb not found",nbNotFound);
                     displayVisionPortalData();
                     break;
             }
