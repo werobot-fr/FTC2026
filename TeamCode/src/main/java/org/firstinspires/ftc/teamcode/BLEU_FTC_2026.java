@@ -340,7 +340,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         
         initializeVisionPortal();
 
-        telemetry.addData("Status", "Initialized");
+        telemetry.addData("Status nouveau", "Initialized");
         telemetry.update();
         
         avantDroit  = hardwareMap.get(DcMotorEx.class, "avantdroit");
@@ -382,7 +382,8 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         servoViolet.setPosition(BAS_VIOLET);
         servoPelle.setPosition(HAUTPELLE);
         int duree = 0;
-        
+
+
         waitForStart();
  
         // run until the end of the match (driver presses STOP)
