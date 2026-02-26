@@ -24,6 +24,9 @@ import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.Servo;
 import java.util.ArrayList;
 
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import org.firstinspires.ftc.vision.VisionPortal;
@@ -83,19 +86,23 @@ public class BLEU_FTC_2026 extends LinearOpMode {
     private double BAS_VERT = 0.56;
     private double HAUT_VERT = 0.5;
     private double POS_INIT_TRI = 0.47;
-    private double posVert = 1; 
+    private double posVert = 1;
+    private double x = 0.0;
+    private double y = 0.0;
+    private double z = 0.0;
+    private boolean tagFound = false;
     double vitesseRoueAVD;
     double vitesseRoueAVG;
     double vitesseRoueARG;
     double vitesseRoueARD;
     
     
-    final double SPEED_GAIN  =  0.02  ;   //  Forward Speed Control "Gain". e.g. Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
+    final double SPEED_GAIN  =  0.01  ;   //  Forward Speed Control "Gain". e.g. Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
     final double STRAFE_GAIN =  0.015 ;   //  Strafe Speed Control "Gain".  e.g. Ramp up to 37% power at a 25 degree Yaw error.   (0.375 / 25.0)
     final double TURN_GAIN   =  0.01  ;   //  Turn Control "Gain".  e.g. Ramp up to 25% power at a 25 degree error. (0.25 / 25.0)
 
     final double MAX_AUTO_SPEED = 0.5;   //  Clip the approach speed to this max value (adjust for your robot)
-    final double MAX_AUTO_STRAFE= 0.5;   //  Clip the strafing speed to this max value (adjust for your robot)
+    final double MAX_AUTO_STRAFE= 0.3;   //  Clip the strafing speed to this max value (adjust for your robot)
     final double MAX_AUTO_TURN  = 0.3;   //  Clip the turn speed to this max value (adjust for your robot)
     private boolean x_OK, y_OK, z_OK;
     
@@ -259,10 +266,17 @@ public class BLEU_FTC_2026 extends LinearOpMode {
     
     
     public void initializeVisionPortal(){
+        Position cameraPosition = new Position(DistanceUnit.CM,
+                0, 19.5, 43.5, 0);
+        YawPitchRollAngles cameraOrientation = new YawPitchRollAngles(AngleUnit.DEGREES,
+                0, -73, 0, 0);
+
+
         myVisionPortalBuilder = new VisionPortal.Builder();
         myVisionPortalBuilder.setCamera((hardwareMap.get(WebcamName.class, "webcam")));
         myVisionPortalBuilder.enableLiveView(true);
-        myAprilTagProcessorBuilder = new AprilTagProcessor.Builder();
+        myAprilTagProcessorBuilder = new AprilTagProcessor.Builder()
+                .setCameraPose(cameraPosition, cameraOrientation);
         myAprilTagProcessor = (myAprilTagProcessorBuilder.build());
         myVisionPortalBuilder.addProcessor(myAprilTagProcessor);
         myVisionPortal = (myVisionPortalBuilder.build());
@@ -319,6 +333,11 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         avantDroit.setVelocity(vitesseRoueAVD*VITESSE_MAX_MOTEUR);
         arriereGauche.setVelocity(vitesseRoueARG*VITESSE_MAX_MOTEUR);
         arriereDroit.setVelocity(vitesseRoueARD*VITESSE_MAX_MOTEUR);
+        telemetry.addData("velocity AVG",vitesseRoueAVG*VITESSE_MAX_MOTEUR);
+        telemetry.addData("velocity AVD",vitesseRoueAVD*VITESSE_MAX_MOTEUR);
+        telemetry.addData("velocity ARG",vitesseRoueARG*VITESSE_MAX_MOTEUR);
+        telemetry.addData("velocity ARD",vitesseRoueARD*VITESSE_MAX_MOTEUR);
+
      }
     
     
@@ -359,16 +378,16 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         avantDroit.setDirection(DcMotorEx.Direction.REVERSE);
         arriereDroit.setDirection(DcMotorEx.Direction.REVERSE);
         
-        avantDroit.setMode(DcMotorEx.RunMode.RUN_USING_ENCODERS);
+        avantDroit.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         avantDroit.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         
-        avantGauche.setMode(DcMotorEx.RunMode.RUN_USING_ENCODERS);
+        avantGauche.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         avantGauche.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         
-        arriereDroit.setMode(DcMotorEx.RunMode.RUN_USING_ENCODERS);
+        arriereDroit.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         arriereDroit.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         
-        arriereGauche.setMode(DcMotorEx.RunMode.RUN_USING_ENCODERS);
+        arriereGauche.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         arriereGauche.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         
         RevHubOrientationOnRobot.LogoFacingDirection logo = RevHubOrientationOnRobot.LogoFacingDirection.UP;
@@ -389,7 +408,11 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             double vitesseRoueAVG, vitesseRoueAVD, vitesseRoueARG, vitesseRoueARD;
-            
+
+            myAprilTagDetections = (myAprilTagProcessor.getDetections());
+
+            // etape = State.FIN;
+
             switch(etape){
                 case SCAN_ORDRE:
                     myAprilTagDetections = (myAprilTagProcessor.getDetections());
@@ -417,965 +440,980 @@ public class BLEU_FTC_2026 extends LinearOpMode {
                               telemetry.addData("Ordre","Couleurs non detectées");
                           }
                   }
-                  if (!ordre.isEmpty()){   
+                  if (!ordre.isEmpty()){
                         etape = State.SE_PLACER;
                     }
                   telemetry.update();
                   break;
-                  
+
                 case SE_PLACER:
-                    displayVisionPortalData();
-                    double x = 0;
-                    double y = 0;
-                    double z = 0;
+                    int nbTags = 0;
                     for (AprilTagDetection myAprilTag : myAprilTagDetections){
                         if (myAprilTag.id == 20) {
-                            double range = myAprilTag.ftcPose.range*2.54-62;
+                            double range = myAprilTag.ftcPose.range*2.54;
                             double bearing = myAprilTag.ftcPose.bearing;
                             double yaw = myAprilTag.ftcPose.yaw;
                             x = yaw;
                             y = range - 62;
                             z = bearing;
-                            telemetry.addData("Bleu","trouvé");
-                            break;
+                            tagFound = true;
+                            nbTags+=1;
+                            //break;
                         }
-                        telemetry.addData("Bleu"," non trouvé");
                     }
-                    
-                    x_OK = x>-5 && x<5;
-                    y_OK = y>-5 && y<5;
-                    z_OK = z>-5 && z<5;
-                    if (x_OK && y_OK && z_OK){
-                        stopMoving();
-                        etape = State.TIR;
-                        telemetry.addData("bleu","Goto TIR");
+                    if (nbTags == 0){tagFound = false;}
+                    if (tagFound) {
+                        x_OK = x > -5 && x < 5;
+                        y_OK = y > -5 && y < 5;
+                        z_OK = z > -3 && z < 3;
+                        if (x_OK && y_OK && z_OK) {
+                            stopMoving();
+                            etape = State.TIR;
+                            telemetry.addData("bleu", "Goto TIR");
+                        } else {
+                            telemetry.addData("range-62",y);
+                            telemetry.addData("yaw",x);
+                            telemetry.addData("bearing",z);
+                            if (x_OK){
+                                x=0;
+                            }
+                            else {
+                                x = Range.clip(x * STRAFE_GAIN, -MAX_AUTO_STRAFE, MAX_AUTO_STRAFE);
+                            }
+                            if (y_OK){y = 0;}
+                            else{y = Range.clip(y * SPEED_GAIN, -MAX_AUTO_SPEED, MAX_AUTO_SPEED);}
+                            if(z_OK){z=0;}
+                            else{z = Range.clip(-z * TURN_GAIN, -MAX_AUTO_TURN, MAX_AUTO_TURN);}
+                            moveRobot(x, y, z);
+                        }
+
                     }
-                    else{
-                        x = Range.clip(x * STRAFE_GAIN, -MAX_AUTO_STRAFE, MAX_AUTO_STRAFE);
-                        y = Range.clip(y * SPEED_GAIN, -MAX_AUTO_SPEED, MAX_AUTO_SPEED);
-                        z = Range.clip(z * TURN_GAIN, -MAX_AUTO_TURN, MAX_AUTO_TURN);
-                        moveRobot(x,y,z);
-                        telemetry.addData("bleu","Move");
+                    else {
+                        telemetry.addLine("Recherche du Tag ...");
+                        //stopMoving();
+                        moveRobot(x*0.7,y*0.7,z*0.7);
                     }
                     telemetry.update();
                     break;
-                    
+
                 case TIR:
                     tir(ordre);
                     etape = State.FIN;
                     break;
-                    
+
                 case FIN:
+                    telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f",x,y,z));
+                    displayVisionPortalData();
                     break;
             }
             
            
             
             
-            // switch(etape){
-            //     case GOTO_QR:
-            //         translation("AVANT",100);
-            //         translation("DROITE",40);
-            //         etape = State.SCAN;
-            //         break;
-                    
-            //     case SCAN:
-            //         myAprilTagDetections = (myAprilTagProcessor.getDetections());
-            //         for (AprilTagDetection myAprilTagDetection2 : myAprilTagDetections) {
-            //             myAprilTagDetection = myAprilTagDetection2;
-            //               if (myAprilTagDetection.id == 21){
-            //                 ordre.add("G");
-            //                 ordre.add("P");
-            //                 ordre.add("P");
-            //               }
-            //               else if (myAprilTagDetection.id == 22){
-            //                 ordre.add("P");
-            //                 ordre.add("G");
-            //                 ordre.add("P");
-            //               }
-            //               else if (myAprilTagDetection.id == 23){
-            //                 ordre.add("P");
-            //                 ordre.add("P");
-            //                 ordre.add("G");
-            //               }
-            //               else {
-            //                   telemetry.addData("Ordre","Couleurs non detectées");
-            //               }
-            //       }
-            //       if (!ordre.isEmpty()){   
-            //             etape = State.GOTO_TIR0;
-            //         }
-                  
-            //       break;
-                  
-            //     case GOTO_TIR0:
-            //         translation("AVANT",135);
-            //         translation("GAUCHE",50);
-            //         rotation("GAUCHE",45);
-            //         translation("AVANT",60);
-            //         // translation("GAUCHE",40);
-            //         etape = State.TIR_BALLES;
-            //         break;
-                    
-            //     case SE_PLACER0:
-            //         etape_intern = State.YAW;
-            //         displayVisionPortalData();
-            //         switch(etape_intern){
-            //             case YAW:
-            //                 double yaw = 0.0;
-            //                 myAprilTagDetections = (myAprilTagProcessor.getDetections());
-            //                 for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //                     if (myAprilTag.id == 20) {// BLEU
-            //                         yaw = myAprilTag.ftcPose.yaw;
-            //                     }
-            //                 }
-            //                 telemetry.addData("yaw",yaw);
-            //                 if(Math.abs(yaw)<5){
-            //                     telemetry.addData("yaw","GOTO CENTR");
-            //                     stopMoving();
-            //                     etape_intern = State.CENTR;
-                                
-            //                 }
-            //                 else{
-            //                     if(yaw > 0){ //GAUCHE
-            //                         vitG =  -0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","gauche");
-            //                     }
-            //                     else{
-            //                         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","droite");
-            //                     }
-            //                     avantDroit.setVelocity(vitD);
-            //                     arriereDroit.setVelocity(vitD);
-            //                     avantGauche.setVelocity(vitG);
-            //                     arriereGauche.setVelocity(vitG);
-            //                 }
-            //                 // rotation(,);
-            //                 telemetry.update();
-            //                 // sleep(700);
-            //                 break;
-                            
-            //             case DIST:
-            //                  double range = 0.0;
-                            
-            //                 for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //                     if (myAprilTag.id == 20) {// range
-            //                         range = myAprilTag.ftcPose.range*2.54-62;
-            //                     }
-            //                     }
-            //                 telemetry.addData("range",range);
-            //                 if(range >-5 & range <5){
-            //                     stopMoving();
-            //                     etape = State.TIR_BALLES;
-            //                     telemetry.addData("range","GOTO TIR");
-            //                 }
-            //                 else{
-            //                     if(range>0){   //positif
-            //                         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","avant");
-            //                     }
-            //                     else{            //negatif
-            //                         vitG = -0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","arriere");
-            //                     }
-            //                     avantDroit.setVelocity(vitG);
-            //                     arriereDroit.setVelocity(vitD);
-            //                     avantGauche.setVelocity(vitG);
-            //                     arriereGauche.setVelocity(vitD);
-            //                 }
-            //                 telemetry.update();
-            //                 // sleep(700);
-            //                 break;
-            //             case CENTR:
-            //                 double bearing = 0.0;
-            //                 for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //                     if (myAprilTag.id == 20) {// bearing
-            //                         bearing = myAprilTag.ftcPose.bearing;
-            //                     }
-            //                 }
-            //                 telemetry.addData("bearing",bearing);
-            //                 if(bearing>-5& bearing<5){
-            //                     // vitesseG = 0;
-            //                     // vitesseD =  0;
-            //                     stopMoving();
-            //                     etape_intern = State.DIST;
-            //                     telemetry.addData("bearing","GOTO DIST");
-            //                 }
-            //                 else{
-            //                     if(bearing>0){   //positif
-            //                         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","gauche");
-            //                     }
-            //                     else{            //negatif
-            //                         vitG = -0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","droite");
-            //                     }
-            //                     avantDroit.setVelocity(vitG);
-            //                     arriereDroit.setVelocity(vitD);
-            //                     avantGauche.setVelocity(vitD);
-            //                     arriereGauche.setVelocity(vitG);
-            //                 }
-            //                 telemetry.update();
-            //                 // sleep(700);
-            //                 break;
-            //         }
-                    
-                  
-            //     case TIR_BALLES:
-            //         tir(ordre);
-            //         rotation("GAUCHE",45);
-            //         translation("ARRIERE",60);
-            //         etape = State.IMUHELP;
-            //         break;
-                    
-            //     case RANGEE1:
-            //         rotation("GAUCHE",45);
-            //         translation("ARRIERE",60);
-            //         translation("GAUCHE",60);
-            //         etape = State.MANGERBALLES1;
-            //         timer.reset();
-            //         moissoneuse.setPower(-1);
-                    
-            //         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //         avantDroit.setVelocity(vitG);
-            //         arriereDroit.setVelocity(vitD);
-            //         avantGauche.setVelocity(vitG);
-            //         arriereGauche.setVelocity(vitD);
-                    
-            //         break;
-                    
-            //     case MANGERBALLES1:
-            //     temps = timer.milliseconds();
-            //         telemetry.addData("duree",duree);
-            //         telemetry.addData("timer",temps);
-            //         if (temps > duree){
-            //              telemetry.addData("FIN","FIN");
-            //             stopMoving();
-            //             if (temps > duree + 2000){
-            //                 moissoneuse.setPower(0);
-            //                 trieurColor.setPosition(POS_INIT_TRI);
-            //                 etape = State.GOTO_TIR1;
-            //               telemetry.update();
-            //                 break;
-                
-            //             }
-            //             telemetry.update();
-            //         }
-            //         colors = colorSensor.getNormalizedColors();
-            //         hue = JavaUtil.colorToHue(colors.toColor());
-                    
-            //         if (100<=hue && hue<200){//Vertes
-            //             trieurColor.setPosition(1);
-            //         }
-            //         else if (200<=hue){//Violettes
-            //             trieurColor.setPosition(0);
-            //         }
-            //         else if (hue < 5) { trieurColor.setPosition(POS_INIT_TRI);}
-            //         telemetry.update();
-            //         break;
-                    
-            //     case GOTO_TIR1:
-            //         translation("ARRIERE",60);
-            //         translation("DROITE",60);
-            //         rotation("DROITE",45);
-            //         etape = State.SE_PLACER1;
-            //         break;
-                    
-            //     case SE_PLACER1:
-            //         etape_intern = State.YAW;
-            //         switch(etape_intern){
-            //             case YAW:
-            //                 double yaw = 0.0;
-            //                 myAprilTagDetections = (myAprilTagProcessor.getDetections());
-            //                 for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //                     if (myAprilTag.id == 20) {// BLEU
-            //                         yaw = myAprilTag.ftcPose.yaw;
-            //                     }
-            //                 }
-            //                 telemetry.addData("yaw",yaw);
-            //                 if(Math.abs(yaw)<5){
-            //                     telemetry.addData("yaw","GOTO CENTR");
-            //                     stopMoving();
-            //                     etape_intern = State.CENTR;
-                                
-            //                 }
-            //                 else{
-            //                     if(yaw > 0){ //GAUCHE
-            //                         vitG =  -0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","gauche");
-            //                     }
-            //                     else{
-            //                         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","droite");
-            //                     }
-            //                     avantDroit.setVelocity(vitD);
-            //                     arriereDroit.setVelocity(vitD);
-            //                     avantGauche.setVelocity(vitG);
-            //                     arriereGauche.setVelocity(vitG);
-            //                 }
-            //                 // rotation(,);
-            //                 telemetry.update();
-            //                 // sleep(700);
-            //                 break;
-                            
-            //             case DIST:
-            //                  double range = 0.0;
-                            
-            //                 for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //                     if (myAprilTag.id == 20) {// range
-            //                         range = myAprilTag.ftcPose.range*2.54-62;
-            //                     }
-            //                     }
-            //                 telemetry.addData("range",range);
-            //                 if(range >-5 && range <5){
-            //                     stopMoving();
-            //                     etape = State.TIRER1;
-            //                     telemetry.addData("range","GOTO TIR");
-            //                 }
-            //                 else{
-            //                     if(range>0){   //positif
-            //                         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","avant");
-            //                     }
-            //                     else{            //negatif
-            //                         vitG = -0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","arriere");
-            //                     }
-            //                     avantDroit.setVelocity(vitG);
-            //                     arriereDroit.setVelocity(vitD);
-            //                     avantGauche.setVelocity(vitG);
-            //                     arriereGauche.setVelocity(vitD);
-            //                 }
-            //                 telemetry.update();
-            //                 // sleep(700);
-            //                 break;
-            //             case CENTR:
-            //                 double bearing = 0.0;
-            //                 for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //                     if (myAprilTag.id == 20) {// bearing
-            //                         bearing = myAprilTag.ftcPose.bearing;
-            //                     }
-            //                 }
-            //                 telemetry.addData("bearing",bearing);
-            //                 if(bearing>-5 & bearing<5){
-            //                     // vitesseG = 0;
-            //                     // vitesseD =  0;
-            //                     stopMoving();
-            //                     etape_intern = State.DIST;
-            //                     telemetry.addData("bearing","GOTO DIST");
-            //                 }
-            //                 else{
-            //                     if(bearing>0){   //positif
-            //                         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","gauche");
-            //                     }
-            //                     else{            //negatif
-            //                         vitG = -0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","droite");
-            //                     }
-            //                     avantDroit.setVelocity(vitG);
-            //                     arriereDroit.setVelocity(vitD);
-            //                     avantGauche.setVelocity(vitD);
-            //                     arriereGauche.setVelocity(vitG);
-            //                 }
-            //                 telemetry.update();
-            //                 // sleep(700);
-            //                 break;
-            //         }
-                        
-                    
-                    
-            //     case TIRER1:
-            //         tir(ordre);
-            //         rotation("GAUCHE",45);
-            //         etape = State.RANGEE2;
-            //         break;
-                    
-            //     case RANGEE2:
-            //         translation("ARRIERE",60);
-            //         translation("GAUCHE",150);
-            //         etape = State.MANGERBALLES2;
-            //         timer.reset();
-            //         moissoneuse.setPower(-1);
-                    
-            //         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //         avantDroit.setVelocity(vitG);
-            //         arriereDroit.setVelocity(vitD);
-            //         avantGauche.setVelocity(vitG);
-            //         arriereGauche.setVelocity(vitD);
-            //         break;
-                    
-            //     case MANGERBALLES2:
-            //         temps = timer.milliseconds();
-            //         telemetry.addData("duree",duree);
-            //         telemetry.addData("timer",temps);
-            //         if (temps > duree){
-            //              telemetry.addData("FIN","FIN");
-            //             stopMoving();
-            //             if (temps > duree + 2000){
-            //                 moissoneuse.setPower(0);
-            //                 trieurColor.setPosition(POS_INIT_TRI);
-            //                 etape = State.GOTO_TIR2;
-            //               telemetry.update();
-            //                 break;
-            //             }
-            //             telemetry.update();
-            //         }
-            //         colors = colorSensor.getNormalizedColors();
-            //         hue = JavaUtil.colorToHue(colors.toColor());
-                    
-            //         if (100<=hue && hue<200){//Vertes
-            //             trieurColor.setPosition(1);
-            //         }
-            //         else if (200<=hue){//Violettes
-            //             trieurColor.setPosition(0);
-            //         }
-            //         else if (hue < 5) { trieurColor.setPosition(POS_INIT_TRI);}
-            //         telemetry.update();
-            //         break;
-                
-            //     case GOTO_TIR2:
-            //         translation("ARRIERE",60);
-            //         translation("DROITE",90);
-            //         rotation("DROITE",45);
-            //         etape = State.SE_PLACER2;
-            //         break;
-                    
-            //     case SE_PLACER2:
-            //         etape_intern = State.YAW;
-            //         switch(etape_intern){
-            //             case YAW:
-            //                 double yaw = 0.0;
-            //                 myAprilTagDetections = (myAprilTagProcessor.getDetections());
-            //                 for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //                     if (myAprilTag.id == 20) {// BLEU
-            //                         yaw = myAprilTag.ftcPose.yaw;
-            //                     }
-            //                 }
-            //                 telemetry.addData("yaw",yaw);
-            //                 if(Math.abs(yaw)<5){
-            //                     telemetry.addData("yaw","GOTO CENTR");
-            //                     stopMoving();
-            //                     etape_intern = State.CENTR;
-                                
-            //                 }
-            //                 else{
-            //                     if(yaw > 0){ //GAUCHE
-            //                         vitG =  -0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","gauche");
-            //                     }
-            //                     else{
-            //                         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","droite");
-            //                     }
-            //                     avantDroit.setVelocity(vitD);
-            //                     arriereDroit.setVelocity(vitD);
-            //                     avantGauche.setVelocity(vitG);
-            //                     arriereGauche.setVelocity(vitG);
-            //                 }
-            //                 // rotation(,);
-            //                 telemetry.update();
-            //                 // sleep(700);
-            //                 break;
-                            
-            //             case DIST:
-            //                  double range = 0.0;
-                            
-            //                 for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //                     if (myAprilTag.id == 20) {// range
-            //                         range = myAprilTag.ftcPose.range*2.54-62;
-            //                     }
-            //                     }
-            //                 telemetry.addData("range",range);
-            //                 if(range >-5 & range <5){
-            //                     stopMoving();
-            //                     etape = State.TIRER2;
-            //                     telemetry.addData("range","GOTO TIR");
-            //                 }
-            //                 else{
-            //                     if(range>0){   //positif
-            //                         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","avant");
-            //                     }
-            //                     else{            //negatif
-            //                         vitG = -0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","arriere");
-            //                     }
-            //                     avantDroit.setVelocity(vitG);
-            //                     arriereDroit.setVelocity(vitD);
-            //                     avantGauche.setVelocity(vitG);
-            //                     arriereGauche.setVelocity(vitD);
-            //                 }
-            //                 telemetry.update();
-            //                 // sleep(700);
-            //                 break;
-            //             case CENTR:
-            //                 double bearing = 0.0;
-            //                 for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //                     if (myAprilTag.id == 20) {// bearing
-            //                         bearing = myAprilTag.ftcPose.bearing;
-            //                     }
-            //                 }
-            //                 telemetry.addData("bearing",bearing);
-            //                 if(bearing>-5 & bearing<5){
-            //                     // vitesseG = 0;
-            //                     // vitesseD =  0;
-            //                     stopMoving();
-            //                     etape_intern = State.DIST;
-            //                     telemetry.addData("bearing","GOTO DIST");
-            //                 }
-            //                 else{
-            //                     if(bearing>0){   //positif
-            //                         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","gauche");
-            //                     }
-            //                     else{            //negatif
-            //                         vitG = -0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","droite");
-            //                     }
-            //                     avantDroit.setVelocity(vitG);
-            //                     arriereDroit.setVelocity(vitD);
-            //                     avantGauche.setVelocity(vitD);
-            //                     arriereGauche.setVelocity(vitG);
-            //                 }
-            //                 telemetry.update();
-            //                 // sleep(700);
-            //                 break;
-            //         }
-                    
-            //     case TIRER2:
-            //         tir(ordre);
-            //         rotation("GAUCHE",45);
-            //         etape = State.RANGEE3;
-            //         break;
-                
-            //     case RANGEE3:
-            //         translation("ARRIERE",60);
-            //         translation("GAUCHE",180);
-            //         etape = State.MANGERBALLES3;
-            //         timer.reset();
-            //         moissoneuse.setPower(-1);
-                    
-            //         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //         avantDroit.setVelocity(vitG);
-            //         arriereDroit.setVelocity(vitD);
-            //         avantGauche.setVelocity(vitG);
-            //         arriereGauche.setVelocity(vitD);
-            //         break;
-                    
-            //     case MANGERBALLES3:
-            //          temps = timer.milliseconds();
-            //         telemetry.addData("duree",duree);
-            //         telemetry.addData("timer",temps);
-            //         if (temps > duree){
-            //              telemetry.addData("FIN","FIN");
-            //             stopMoving();
-            //             if (temps > duree + 2000){
-            //                 moissoneuse.setPower(0);
-            //                 trieurColor.setPosition(POS_INIT_TRI);
-            //                 etape = State.GOTO_TIR3;
-            //               telemetry.update();
-            //                 break;
-                
-            //             }
-            //             telemetry.update();
-            //         }
-            //         colors = colorSensor.getNormalizedColors();
-            //         hue = JavaUtil.colorToHue(colors.toColor());
-                    
-            //         if (100<=hue && hue<200){//Vertes
-            //             trieurColor.setPosition(1);
-            //         }
-            //         else if (200<=hue){//Violettes
-            //             trieurColor.setPosition(0);
-            //         }
-            //         else if (hue < 5) { trieurColor.setPosition(POS_INIT_TRI);}
-            //         telemetry.update();
-            //         break;
-                    
-            //     case GOTO_TIR3:
-            //         translation("ARRIERE",60);
-            //         translation("DROITE",180);
-            //         rotation("DROITE",45);
-            //         etape = State.SE_PLACER3;
-            //         break;
-                    
-            //     case SE_PLACER3:
-            //         etape_intern = State.YAW;
-            //         switch(etape_intern){
-            //             case YAW:
-            //                 double yaw = 0.0;
-            //                 myAprilTagDetections = (myAprilTagProcessor.getDetections());
-            //                 for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //                     if (myAprilTag.id == 20) {// BLEU
-            //                         yaw = myAprilTag.ftcPose.yaw;
-            //                     }
-            //                 }
-            //                 telemetry.addData("yaw",yaw);
-            //                 if(Math.abs(yaw)<5){
-            //                     telemetry.addData("yaw","GOTO CENTR");
-            //                     stopMoving();
-            //                     etape_intern = State.CENTR;
-                                
-            //                 }
-            //                 else{
-            //                     if(yaw > 0){ //GAUCHE
-            //                         vitG =  -0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","gauche");
-            //                     }
-            //                     else{
-            //                         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","droite");
-            //                     }
-            //                     avantDroit.setVelocity(vitD);
-            //                     arriereDroit.setVelocity(vitD);
-            //                     avantGauche.setVelocity(vitG);
-            //                     arriereGauche.setVelocity(vitG);
-            //                 }
-            //                 // rotation(,);
-            //                 telemetry.update();
-            //                 // sleep(700);
-            //                 break;
-                            
-            //             case DIST:
-            //                  double range = 0.0;
-                            
-            //                 for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //                     if (myAprilTag.id == 20) {// range
-            //                         range = myAprilTag.ftcPose.range*2.54-62;
-            //                     }
-            //                     }
-            //                 telemetry.addData("range",range);
-            //                 if(range >-5 & range <5){
-            //                     stopMoving();
-            //                     etape = State.TIRER3;
-            //                     telemetry.addData("range","GOTO TIR");
-            //                 }
-            //                 else{
-            //                     if(range>0){   //positif
-            //                         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","avant");
-            //                     }
-            //                     else{            //negatif
-            //                         vitG = -0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","arriere");
-            //                     }
-            //                     avantDroit.setVelocity(vitG);
-            //                     arriereDroit.setVelocity(vitD);
-            //                     avantGauche.setVelocity(vitG);
-            //                     arriereGauche.setVelocity(vitD);
-            //                 }
-            //                 telemetry.update();
-            //                 // sleep(700);
-            //                 break;
-            //             case CENTR:
-            //                 double bearing = 0.0;
-            //                 for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //                     if (myAprilTag.id == 20) {// bearing
-            //                         bearing = myAprilTag.ftcPose.bearing;
-            //                     }
-            //                 }
-            //                 telemetry.addData("bearing",bearing);
-            //                 if(bearing>-5 & bearing<5){
-            //                     // vitesseG = 0;
-            //                     // vitesseD =  0;
-            //                     stopMoving();
-            //                     etape_intern = State.DIST;
-            //                     telemetry.addData("bearing","GOTO DIST");
-            //                 }
-            //                 else{
-            //                     if(bearing>0){   //positif
-            //                         vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","gauche");
-            //                     }
-            //                     else{            //negatif
-            //                         vitG = -0.25*VITESSE_MAX_MOTEUR;
-            //                         vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                         telemetry.addData("direction","droite");
-            //                     }
-            //                     avantDroit.setVelocity(vitG);
-            //                     arriereDroit.setVelocity(vitD);
-            //                     avantGauche.setVelocity(vitD);
-            //                     arriereGauche.setVelocity(vitG);
-            //                 }
-            //                 telemetry.update();
-            //                 // sleep(700);
-            //                 break;
-            //         }
-                    
-            //     case TIRER3:
-            //         tir(ordre);
-            //         rotation("GAUCHE",45);
-            //         etape = State.IMUHELP;
-            //         break;
-                    
-            //     case IMUHELP:
-            //         rotation("GAUCHE",45);
-            //         translation("ARRIERE",40);
-            //         etape = State.FIN;
-            //         break;
-            //     case FIN:
-            //         break;
-                    
-            //  }
+//             switch(etape){
+//                 case GOTO_QR:
+//                     translation("AVANT",100);
+//                     translation("DROITE",40);
+//                     etape = State.SCAN;
+//                     break;
+//
+//                 case SCAN:
+//                     myAprilTagDetections = (myAprilTagProcessor.getDetections());
+//                     for (AprilTagDetection myAprilTagDetection2 : myAprilTagDetections) {
+//                         myAprilTagDetection = myAprilTagDetection2;
+//                           if (myAprilTagDetection.id == 21){
+//                             ordre.add("G");
+//                             ordre.add("P");
+//                             ordre.add("P");
+//                           }
+//                           else if (myAprilTagDetection.id == 22){
+//                             ordre.add("P");
+//                             ordre.add("G");
+//                             ordre.add("P");
+//                           }
+//                           else if (myAprilTagDetection.id == 23){
+//                             ordre.add("P");
+//                             ordre.add("P");
+//                             ordre.add("G");
+//                           }
+//                           else {
+//                               telemetry.addData("Ordre","Couleurs non detectées");
+//                           }
+//                   }
+//                   if (!ordre.isEmpty()){
+//                         etape = State.GOTO_TIR0;
+//                     }
+//
+//                   break;
+//
+//                 case GOTO_TIR0:
+//                     translation("AVANT",135);
+//                     translation("GAUCHE",50);
+//                     rotation("GAUCHE",45);
+//                     translation("AVANT",60);
+//                     // translation("GAUCHE",40);
+//                     etape = State.TIR_BALLES;
+//                     break;
+//
+//                 case SE_PLACER0:
+//                     etape_intern = State.YAW;
+//                     displayVisionPortalData();
+//                     switch(etape_intern){
+//                         case YAW:
+//                             double yaw = 0.0;
+//                             myAprilTagDetections = (myAprilTagProcessor.getDetections());
+//                             for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                                 if (myAprilTag.id == 20) {// BLEU
+//                                     yaw = myAprilTag.ftcPose.yaw;
+//                                 }
+//                             }
+//                             telemetry.addData("yaw",yaw);
+//                             if(Math.abs(yaw)<5){
+//                                 telemetry.addData("yaw","GOTO CENTR");
+//                                 stopMoving();
+//                                 etape_intern = State.CENTR;
+//
+//                             }
+//                             else{
+//                                 if(yaw > 0){ //GAUCHE
+//                                     vitG =  -0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","gauche");
+//                                 }
+//                                 else{
+//                                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","droite");
+//                                 }
+//                                 avantDroit.setVelocity(vitD);
+//                                 arriereDroit.setVelocity(vitD);
+//                                 avantGauche.setVelocity(vitG);
+//                                 arriereGauche.setVelocity(vitG);
+//                             }
+//                             // rotation(,);
+//                             telemetry.update();
+//                             // sleep(700);
+//                             break;
+//
+//                         case DIST:
+//                              double range = 0.0;
+//
+//                             for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                                 if (myAprilTag.id == 20) {// range
+//                                     range = myAprilTag.ftcPose.range*2.54-62;
+//                                 }
+//                                 }
+//                             telemetry.addData("range",range);
+//                             if(range >-5 & range <5){
+//                                 stopMoving();
+//                                 etape = State.TIR_BALLES;
+//                                 telemetry.addData("range","GOTO TIR");
+//                             }
+//                             else{
+//                                 if(range>0){   //positif
+//                                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","avant");
+//                                 }
+//                                 else{            //negatif
+//                                     vitG = -0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","arriere");
+//                                 }
+//                                 avantDroit.setVelocity(vitG);
+//                                 arriereDroit.setVelocity(vitD);
+//                                 avantGauche.setVelocity(vitG);
+//                                 arriereGauche.setVelocity(vitD);
+//                             }
+//                             telemetry.update();
+//                             // sleep(700);
+//                             break;
+//                         case CENTR:
+//                             double bearing = 0.0;
+//                             for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                                 if (myAprilTag.id == 20) {// bearing
+//                                     bearing = myAprilTag.ftcPose.bearing;
+//                                 }
+//                             }
+//                             telemetry.addData("bearing",bearing);
+//                             if(bearing>-5& bearing<5){
+//                                 // vitesseG = 0;
+//                                 // vitesseD =  0;
+//                                 stopMoving();
+//                                 etape_intern = State.DIST;
+//                                 telemetry.addData("bearing","GOTO DIST");
+//                             }
+//                             else{
+//                                 if(bearing>0){   //positif
+//                                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","gauche");
+//                                 }
+//                                 else{            //negatif
+//                                     vitG = -0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","droite");
+//                                 }
+//                                 avantDroit.setVelocity(vitG);
+//                                 arriereDroit.setVelocity(vitD);
+//                                 avantGauche.setVelocity(vitD);
+//                                 arriereGauche.setVelocity(vitG);
+//                             }
+//                             telemetry.update();
+//                             // sleep(700);
+//                             break;
+//                     }
+//
+//
+//                 case TIR_BALLES:
+//                     tir(ordre);
+//                     rotation("GAUCHE",45);
+//                     translation("ARRIERE",60);
+//                     etape = State.IMUHELP;
+//                     break;
+//
+//                 case RANGEE1:
+//                     rotation("GAUCHE",45);
+//                     translation("ARRIERE",60);
+//                     translation("GAUCHE",60);
+//                     etape = State.MANGERBALLES1;
+//                     timer.reset();
+//                     moissoneuse.setPower(-1);
+//
+//                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                     avantDroit.setVelocity(vitG);
+//                     arriereDroit.setVelocity(vitD);
+//                     avantGauche.setVelocity(vitG);
+//                     arriereGauche.setVelocity(vitD);
+//
+//                     break;
+//
+//                 case MANGERBALLES1:
+//                 temps = timer.milliseconds();
+//                     telemetry.addData("duree",duree);
+//                     telemetry.addData("timer",temps);
+//                     if (temps > duree){
+//                          telemetry.addData("FIN","FIN");
+//                         stopMoving();
+//                         if (temps > duree + 2000){
+//                             moissoneuse.setPower(0);
+//                             trieurColor.setPosition(POS_INIT_TRI);
+//                             etape = State.GOTO_TIR1;
+//                           telemetry.update();
+//                             break;
+//
+//                         }
+//                         telemetry.update();
+//                     }
+//                     colors = colorSensor.getNormalizedColors();
+//                     hue = JavaUtil.colorToHue(colors.toColor());
+//
+//                     if (100<=hue && hue<200){//Vertes
+//                         trieurColor.setPosition(1);
+//                     }
+//                     else if (200<=hue){//Violettes
+//                         trieurColor.setPosition(0);
+//                     }
+//                     else if (hue < 5) { trieurColor.setPosition(POS_INIT_TRI);}
+//                     telemetry.update();
+//                     break;
+//
+//                 case GOTO_TIR1:
+//                     translation("ARRIERE",60);
+//                     translation("DROITE",60);
+//                     rotation("DROITE",45);
+//                     etape = State.SE_PLACER1;
+//                     break;
+//
+//                 case SE_PLACER1:
+//                     etape_intern = State.YAW;
+//                     switch(etape_intern){
+//                         case YAW:
+//                             double yaw = 0.0;
+//                             myAprilTagDetections = (myAprilTagProcessor.getDetections());
+//                             for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                                 if (myAprilTag.id == 20) {// BLEU
+//                                     yaw = myAprilTag.ftcPose.yaw;
+//                                 }
+//                             }
+//                             telemetry.addData("yaw",yaw);
+//                             if(Math.abs(yaw)<5){
+//                                 telemetry.addData("yaw","GOTO CENTR");
+//                                 stopMoving();
+//                                 etape_intern = State.CENTR;
+//
+//                             }
+//                             else{
+//                                 if(yaw > 0){ //GAUCHE
+//                                     vitG =  -0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","gauche");
+//                                 }
+//                                 else{
+//                                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","droite");
+//                                 }
+//                                 avantDroit.setVelocity(vitD);
+//                                 arriereDroit.setVelocity(vitD);
+//                                 avantGauche.setVelocity(vitG);
+//                                 arriereGauche.setVelocity(vitG);
+//                             }
+//                             // rotation(,);
+//                             telemetry.update();
+//                             // sleep(700);
+//                             break;
+//
+//                         case DIST:
+//                              double range = 0.0;
+//
+//                             for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                                 if (myAprilTag.id == 20) {// range
+//                                     range = myAprilTag.ftcPose.range*2.54-62;
+//                                 }
+//                                 }
+//                             telemetry.addData("range",range);
+//                             if(range >-5 && range <5){
+//                                 stopMoving();
+//                                 etape = State.TIRER1;
+//                                 telemetry.addData("range","GOTO TIR");
+//                             }
+//                             else{
+//                                 if(range>0){   //positif
+//                                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","avant");
+//                                 }
+//                                 else{            //negatif
+//                                     vitG = -0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","arriere");
+//                                 }
+//                                 avantDroit.setVelocity(vitG);
+//                                 arriereDroit.setVelocity(vitD);
+//                                 avantGauche.setVelocity(vitG);
+//                                 arriereGauche.setVelocity(vitD);
+//                             }
+//                             telemetry.update();
+//                             // sleep(700);
+//                             break;
+//                         case CENTR:
+//                             double bearing = 0.0;
+//                             for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                                 if (myAprilTag.id == 20) {// bearing
+//                                     bearing = myAprilTag.ftcPose.bearing;
+//                                 }
+//                             }
+//                             telemetry.addData("bearing",bearing);
+//                             if(bearing>-5 & bearing<5){
+//                                 // vitesseG = 0;
+//                                 // vitesseD =  0;
+//                                 stopMoving();
+//                                 etape_intern = State.DIST;
+//                                 telemetry.addData("bearing","GOTO DIST");
+//                             }
+//                             else{
+//                                 if(bearing>0){   //positif
+//                                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","gauche");
+//                                 }
+//                                 else{            //negatif
+//                                     vitG = -0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","droite");
+//                                 }
+//                                 avantDroit.setVelocity(vitG);
+//                                 arriereDroit.setVelocity(vitD);
+//                                 avantGauche.setVelocity(vitD);
+//                                 arriereGauche.setVelocity(vitG);
+//                             }
+//                             telemetry.update();
+//                             // sleep(700);
+//                             break;
+//                     }
+//
+//
+//
+//                 case TIRER1:
+//                     tir(ordre);
+//                     rotation("GAUCHE",45);
+//                     etape = State.RANGEE2;
+//                     break;
+//
+//                 case RANGEE2:
+//                     translation("ARRIERE",60);
+//                     translation("GAUCHE",150);
+//                     etape = State.MANGERBALLES2;
+//                     timer.reset();
+//                     moissoneuse.setPower(-1);
+//
+//                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                     avantDroit.setVelocity(vitG);
+//                     arriereDroit.setVelocity(vitD);
+//                     avantGauche.setVelocity(vitG);
+//                     arriereGauche.setVelocity(vitD);
+//                     break;
+//
+//                 case MANGERBALLES2:
+//                     temps = timer.milliseconds();
+//                     telemetry.addData("duree",duree);
+//                     telemetry.addData("timer",temps);
+//                     if (temps > duree){
+//                          telemetry.addData("FIN","FIN");
+//                         stopMoving();
+//                         if (temps > duree + 2000){
+//                             moissoneuse.setPower(0);
+//                             trieurColor.setPosition(POS_INIT_TRI);
+//                             etape = State.GOTO_TIR2;
+//                           telemetry.update();
+//                             break;
+//                         }
+//                         telemetry.update();
+//                     }
+//                     colors = colorSensor.getNormalizedColors();
+//                     hue = JavaUtil.colorToHue(colors.toColor());
+//
+//                     if (100<=hue && hue<200){//Vertes
+//                         trieurColor.setPosition(1);
+//                     }
+//                     else if (200<=hue){//Violettes
+//                         trieurColor.setPosition(0);
+//                     }
+//                     else if (hue < 5) { trieurColor.setPosition(POS_INIT_TRI);}
+//                     telemetry.update();
+//                     break;
+//
+//                 case GOTO_TIR2:
+//                     translation("ARRIERE",60);
+//                     translation("DROITE",90);
+//                     rotation("DROITE",45);
+//                     etape = State.SE_PLACER2;
+//                     break;
+//
+//                 case SE_PLACER2:
+//                     etape_intern = State.YAW;
+//                     switch(etape_intern){
+//                         case YAW:
+//                             double yaw = 0.0;
+//                             myAprilTagDetections = (myAprilTagProcessor.getDetections());
+//                             for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                                 if (myAprilTag.id == 20) {// BLEU
+//                                     yaw = myAprilTag.ftcPose.yaw;
+//                                 }
+//                             }
+//                             telemetry.addData("yaw",yaw);
+//                             if(Math.abs(yaw)<5){
+//                                 telemetry.addData("yaw","GOTO CENTR");
+//                                 stopMoving();
+//                                 etape_intern = State.CENTR;
+//
+//                             }
+//                             else{
+//                                 if(yaw > 0){ //GAUCHE
+//                                     vitG =  -0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","gauche");
+//                                 }
+//                                 else{
+//                                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","droite");
+//                                 }
+//                                 avantDroit.setVelocity(vitD);
+//                                 arriereDroit.setVelocity(vitD);
+//                                 avantGauche.setVelocity(vitG);
+//                                 arriereGauche.setVelocity(vitG);
+//                             }
+//                             // rotation(,);
+//                             telemetry.update();
+//                             // sleep(700);
+//                             break;
+//
+//                         case DIST:
+//                              double range = 0.0;
+//
+//                             for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                                 if (myAprilTag.id == 20) {// range
+//                                     range = myAprilTag.ftcPose.range*2.54-62;
+//                                 }
+//                                 }
+//                             telemetry.addData("range",range);
+//                             if(range >-5 & range <5){
+//                                 stopMoving();
+//                                 etape = State.TIRER2;
+//                                 telemetry.addData("range","GOTO TIR");
+//                             }
+//                             else{
+//                                 if(range>0){   //positif
+//                                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","avant");
+//                                 }
+//                                 else{            //negatif
+//                                     vitG = -0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","arriere");
+//                                 }
+//                                 avantDroit.setVelocity(vitG);
+//                                 arriereDroit.setVelocity(vitD);
+//                                 avantGauche.setVelocity(vitG);
+//                                 arriereGauche.setVelocity(vitD);
+//                             }
+//                             telemetry.update();
+//                             // sleep(700);
+//                             break;
+//                         case CENTR:
+//                             double bearing = 0.0;
+//                             for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                                 if (myAprilTag.id == 20) {// bearing
+//                                     bearing = myAprilTag.ftcPose.bearing;
+//                                 }
+//                             }
+//                             telemetry.addData("bearing",bearing);
+//                             if(bearing>-5 & bearing<5){
+//                                 // vitesseG = 0;
+//                                 // vitesseD =  0;
+//                                 stopMoving();
+//                                 etape_intern = State.DIST;
+//                                 telemetry.addData("bearing","GOTO DIST");
+//                             }
+//                             else{
+//                                 if(bearing>0){   //positif
+//                                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","gauche");
+//                                 }
+//                                 else{            //negatif
+//                                     vitG = -0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","droite");
+//                                 }
+//                                 avantDroit.setVelocity(vitG);
+//                                 arriereDroit.setVelocity(vitD);
+//                                 avantGauche.setVelocity(vitD);
+//                                 arriereGauche.setVelocity(vitG);
+//                             }
+//                             telemetry.update();
+//                             // sleep(700);
+//                             break;
+//                     }
+//
+//                 case TIRER2:
+//                     tir(ordre);
+//                     rotation("GAUCHE",45);
+//                     etape = State.RANGEE3;
+//                     break;
+//
+//                 case RANGEE3:
+//                     translation("ARRIERE",60);
+//                     translation("GAUCHE",180);
+//                     etape = State.MANGERBALLES3;
+//                     timer.reset();
+//                     moissoneuse.setPower(-1);
+//
+//                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                     avantDroit.setVelocity(vitG);
+//                     arriereDroit.setVelocity(vitD);
+//                     avantGauche.setVelocity(vitG);
+//                     arriereGauche.setVelocity(vitD);
+//                     break;
+//
+//                 case MANGERBALLES3:
+//                      temps = timer.milliseconds();
+//                     telemetry.addData("duree",duree);
+//                     telemetry.addData("timer",temps);
+//                     if (temps > duree){
+//                          telemetry.addData("FIN","FIN");
+//                         stopMoving();
+//                         if (temps > duree + 2000){
+//                             moissoneuse.setPower(0);
+//                             trieurColor.setPosition(POS_INIT_TRI);
+//                             etape = State.GOTO_TIR3;
+//                           telemetry.update();
+//                             break;
+//
+//                         }
+//                         telemetry.update();
+//                     }
+//                     colors = colorSensor.getNormalizedColors();
+//                     hue = JavaUtil.colorToHue(colors.toColor());
+//
+//                     if (100<=hue && hue<200){//Vertes
+//                         trieurColor.setPosition(1);
+//                     }
+//                     else if (200<=hue){//Violettes
+//                         trieurColor.setPosition(0);
+//                     }
+//                     else if (hue < 5) { trieurColor.setPosition(POS_INIT_TRI);}
+//                     telemetry.update();
+//                     break;
+//
+//                 case GOTO_TIR3:
+//                     translation("ARRIERE",60);
+//                     translation("DROITE",180);
+//                     rotation("DROITE",45);
+//                     etape = State.SE_PLACER3;
+//                     break;
+//
+//                 case SE_PLACER3:
+//                     etape_intern = State.YAW;
+//                     switch(etape_intern){
+//                         case YAW:
+//                             double yaw = 0.0;
+//                             myAprilTagDetections = (myAprilTagProcessor.getDetections());
+//                             for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                                 if (myAprilTag.id == 20) {// BLEU
+//                                     yaw = myAprilTag.ftcPose.yaw;
+//                                 }
+//                             }
+//                             telemetry.addData("yaw",yaw);
+//                             if(Math.abs(yaw)<5){
+//                                 telemetry.addData("yaw","GOTO CENTR");
+//                                 stopMoving();
+//                                 etape_intern = State.CENTR;
+//
+//                             }
+//                             else{
+//                                 if(yaw > 0){ //GAUCHE
+//                                     vitG =  -0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","gauche");
+//                                 }
+//                                 else{
+//                                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","droite");
+//                                 }
+//                                 avantDroit.setVelocity(vitD);
+//                                 arriereDroit.setVelocity(vitD);
+//                                 avantGauche.setVelocity(vitG);
+//                                 arriereGauche.setVelocity(vitG);
+//                             }
+//                             // rotation(,);
+//                             telemetry.update();
+//                             // sleep(700);
+//                             break;
+//
+//                         case DIST:
+//                              double range = 0.0;
+//
+//                             for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                                 if (myAprilTag.id == 20) {// range
+//                                     range = myAprilTag.ftcPose.range*2.54-62;
+//                                 }
+//                                 }
+//                             telemetry.addData("range",range);
+//                             if(range >-5 & range <5){
+//                                 stopMoving();
+//                                 etape = State.TIRER3;
+//                                 telemetry.addData("range","GOTO TIR");
+//                             }
+//                             else{
+//                                 if(range>0){   //positif
+//                                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","avant");
+//                                 }
+//                                 else{            //negatif
+//                                     vitG = -0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","arriere");
+//                                 }
+//                                 avantDroit.setVelocity(vitG);
+//                                 arriereDroit.setVelocity(vitD);
+//                                 avantGauche.setVelocity(vitG);
+//                                 arriereGauche.setVelocity(vitD);
+//                             }
+//                             telemetry.update();
+//                             // sleep(700);
+//                             break;
+//                         case CENTR:
+//                             double bearing = 0.0;
+//                             for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                                 if (myAprilTag.id == 20) {// bearing
+//                                     bearing = myAprilTag.ftcPose.bearing;
+//                                 }
+//                             }
+//                             telemetry.addData("bearing",bearing);
+//                             if(bearing>-5 & bearing<5){
+//                                 // vitesseG = 0;
+//                                 // vitesseD =  0;
+//                                 stopMoving();
+//                                 etape_intern = State.DIST;
+//                                 telemetry.addData("bearing","GOTO DIST");
+//                             }
+//                             else{
+//                                 if(bearing>0){   //positif
+//                                     vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","gauche");
+//                                 }
+//                                 else{            //negatif
+//                                     vitG = -0.25*VITESSE_MAX_MOTEUR;
+//                                     vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                                     telemetry.addData("direction","droite");
+//                                 }
+//                                 avantDroit.setVelocity(vitG);
+//                                 arriereDroit.setVelocity(vitD);
+//                                 avantGauche.setVelocity(vitD);
+//                                 arriereGauche.setVelocity(vitG);
+//                             }
+//                             telemetry.update();
+//                             // sleep(700);
+//                             break;
+//                     }
+//
+//                 case TIRER3:
+//                     tir(ordre);
+//                     rotation("GAUCHE",45);
+//                     etape = State.IMUHELP;
+//                     break;
+//
+//                 case IMUHELP:
+//                     rotation("GAUCHE",45);
+//                     translation("ARRIERE",40);
+//                     etape = State.FIN;
+//                     break;
+//                 case FIN:
+//                     break;
+//
+//              }
             
-            //  }
+              //}
             
             
             
-            // switch(etape){
-            //     case DEPL1:
-            //         translation("AVANT",55);
-            //         stopMoving();
-            //         etape = State.DETECT;
-                    
-            //         break;
-            //     case DETECT:
-            //         myAprilTagDetections = (myAprilTagProcessor.getDetections());
-            //         for (AprilTagDetection myAprilTagDetection2 : myAprilTagDetections) {
-            //             myAprilTagDetection = myAprilTagDetection2;
-            //               if (myAprilTagDetection.id == 21){
-            //                 ordre.add("G");
-            //                 ordre.add("P");
-            //                 ordre.add("P");
-            //               }
-            //               else if (myAprilTagDetection.id == 22){
-            //                 ordre.add("P");
-            //                 ordre.add("G");
-            //                 ordre.add("P");
-            //               }
-            //               else if (myAprilTagDetection.id == 23){
-            //                 ordre.add("P");
-            //                 ordre.add("P");
-            //                 ordre.add("G");
-            //               }
-            //               else {
-            //                   telemetry.addData("Ordre","Couleurs non detectées");
-            //               }
-            //       }
-                  
-            //         if (!ordre.isEmpty()){   
-            //             etape = State.DEPL2;
-            //         }
-            //         break;
-                    
-            //     case DEPL2:
-            //         translation("GAUCHE",58);
-            //         etape = State.MANGEBALLES;
-            //         moissoneuse.setPower(-1);
-            //         double vitesse =VITESSE_MAX_MOTEUR/20*Math.sqrt(2);// VITESSE_MAX_MOTEUR/8*Math.sqrt(2);
-            //         duree = (int) (calculDuree(80)*3);
-            //         avantDroit.setVelocity(vitesse);
-            //         arriereDroit.setVelocity(vitesse);
-            //         avantGauche.setVelocity(vitesse);
-            //         arriereGauche.setVelocity(vitesse);
-            //         timer.reset();
-            //         break;
-                    
-            //     case MANGEBALLES:
-            //         double temps = timer.milliseconds();
-            //         telemetry.addData("duree",duree);
-            //         telemetry.addData("timer",temps);
-            //         if (temps > duree){
-            //             telemetry.addData("FIN","FIN");
-            //             stopMoving();
-            //             if (temps > duree + 2000){
-            //                 moissoneuse.setPower(0);
-            //                 trieurColor.setPosition(POS_INIT_TRI);
-            //                 etape = State.DEPL3;
-            //                 telemetry.update();
-            //                 break;
-                
-            //             }
-            //             telemetry.update();
-            //         }
-            //         colors = colorSensor.getNormalizedColors();
-            //         hue = JavaUtil.colorToHue(colors.toColor());
-                    
-            //         if (100<=hue && hue<200){//Vertes
-            //             trieurColor.setPosition(1);
-            //         }
-            //         else if (200<=hue){//Violettes
-            //             trieurColor.setPosition(0);
-            //         }
-            //         else if (hue < 5) { trieurColor.setPosition(POS_INIT_TRI);}
-            //         telemetry.update();
-            //         break;
-                    
-            //         case DEPL3:
-            //         translation("ARRIERE",50);
-            //         translation("DROITE",90);
-            //         if (ordre.isEmpty()){
-            //             telemetry.addData("ordre","vide");
-            //         }
-            //         else{
-            //             telemetry.addData("ordre",ordre.get(0)+ordre.get(1)+ordre.get(2));
-            //         }
-            //         telemetry.update();
-            //         etape = State.YAW;
-            //         break;
-            //     case YAW:
-            //         double yaw = 0.0;
-            //         myAprilTagDetections = (myAprilTagProcessor.getDetections());
-            //         for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //             if (myAprilTag.id == 20) {// BLEU
-            //                 yaw = myAprilTag.ftcPose.yaw;
-            //             }
-            //         }
-            //         telemetry.addData("yaw",yaw);
-            //         if(Math.abs(yaw)<5){
-            //             telemetry.addData("yaw","GOTO CENTR");
-            //             stopMoving();
-            //             etape = State.CENTR;
-                        
-            //         }
-            //         else{
-            //             if(yaw > 0){ //GAUCHE
-            //                 vitG =  -0.25*VITESSE_MAX_MOTEUR;
-            //                 vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                 telemetry.addData("direction","gauche");
-            //             }
-            //             else{
-            //                 vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                 vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                 telemetry.addData("direction","droite");
-            //             }
-            //             avantDroit.setVelocity(vitD);
-            //             arriereDroit.setVelocity(vitD);
-            //             avantGauche.setVelocity(vitG);
-            //             arriereGauche.setVelocity(vitG);
-            //         }
-            //         // rotation(,);
-            //         telemetry.update();
-            //         // sleep(700);
-            //         break;
-                    
-            //     case DIST:
-            //          double range = 0.0;
-                    
-            //         for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //             if (myAprilTag.id == 20) {// range
-            //                 range = myAprilTag.ftcPose.range*2.54-62;
-            //             }
-            //         }
-            //         telemetry.addData("range",range);
-            //         if(range >-5 & range <5){
-            //             stopMoving();
-            //             etape = State.TIR;
-            //             telemetry.addData("range","GOTO TIR");
-            //         }
-            //         else{
-            //             if(range>0){   //positif
-            //                 vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                 vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                 telemetry.addData("direction","avant");
-            //             }
-            //             else{            //negatif
-            //                 vitG = -0.25*VITESSE_MAX_MOTEUR;
-            //                 vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                 telemetry.addData("direction","arriere");
-            //             }
-            //             avantDroit.setVelocity(vitG);
-            //             arriereDroit.setVelocity(vitD);
-            //             avantGauche.setVelocity(vitG);
-            //             arriereGauche.setVelocity(vitD);
-            //         }
-            //         telemetry.update();
-            //         // sleep(700);
-            //         break;
-            //     case CENTR:
-            //         double bearing = 0.0;
-            //         for (AprilTagDetection myAprilTag : myAprilTagDetections){
-            //             if (myAprilTag.id == 20) {// bearing
-            //                 bearing = myAprilTag.ftcPose.bearing;
-            //             }
-            //         }
-            //         telemetry.addData("bearing",bearing);
-            //         if(bearing>-10 & bearing<10){
-            //             // vitesseG = 0;
-            //             // vitesseD =  0;
-            //             stopMoving();
-            //             etape = State.DIST;
-            //             telemetry.addData("bearing","GOTO DIST");
-            //         }
-            //         else{
-            //             if(bearing>0){   //positif
-            //                 vitG = 0.25*VITESSE_MAX_MOTEUR;
-            //                 vitD = -0.25*VITESSE_MAX_MOTEUR;
-            //                 telemetry.addData("direction","gauche");
-            //             }
-            //             else{            //negatif
-            //                 vitG = -0.25*VITESSE_MAX_MOTEUR;
-            //                 vitD = 0.25*VITESSE_MAX_MOTEUR;
-            //                 telemetry.addData("direction","droite");
-            //             }
-            //             avantDroit.setVelocity(vitG);
-            //             arriereDroit.setVelocity(vitD);
-            //             avantGauche.setVelocity(vitD);
-            //             arriereGauche.setVelocity(vitG);
-            //         }
-            //         telemetry.update();
-            //         // sleep(700);
-            //         break;
-                    
-            //         case TIR :
-            //             tir(ordre);
-            //             etape = State.SUITE;
-            //             break;
-            //     case SUITE:
-            //         displayVisionPortalData();
-            //         break;
-                    
-            // }
+//             switch(etape){
+//                 case DEPL1:
+//                     translation("AVANT",55);
+//                     stopMoving();
+//                     etape = State.DETECT;
+//
+//                     break;
+//                 case DETECT:
+//                     myAprilTagDetections = (myAprilTagProcessor.getDetections());
+//                     for (AprilTagDetection myAprilTagDetection2 : myAprilTagDetections) {
+//                         myAprilTagDetection = myAprilTagDetection2;
+//                           if (myAprilTagDetection.id == 21){
+//                             ordre.add("G");
+//                             ordre.add("P");
+//                             ordre.add("P");
+//                           }
+//                           else if (myAprilTagDetection.id == 22){
+//                             ordre.add("P");
+//                             ordre.add("G");
+//                             ordre.add("P");
+//                           }
+//                           else if (myAprilTagDetection.id == 23){
+//                             ordre.add("P");
+//                             ordre.add("P");
+//                             ordre.add("G");
+//                           }
+//                           else {
+//                               telemetry.addData("Ordre","Couleurs non detectées");
+//                           }
+//                   }
+//
+//                     if (!ordre.isEmpty()){
+//                         etape = State.DEPL2;
+//                     }
+//                     break;
+//
+//                 case DEPL2:
+//                     translation("GAUCHE",58);
+//                     etape = State.MANGEBALLES;
+//                     moissoneuse.setPower(-1);
+//                     double vitesse =VITESSE_MAX_MOTEUR/20*Math.sqrt(2);// VITESSE_MAX_MOTEUR/8*Math.sqrt(2);
+//                     duree = (int) (calculDuree(80)*3);
+//                     avantDroit.setVelocity(vitesse);
+//                     arriereDroit.setVelocity(vitesse);
+//                     avantGauche.setVelocity(vitesse);
+//                     arriereGauche.setVelocity(vitesse);
+//                     timer.reset();
+//                     break;
+//
+//                 case MANGEBALLES:
+//                     double temps = timer.milliseconds();
+//                     telemetry.addData("duree",duree);
+//                     telemetry.addData("timer",temps);
+//                     if (temps > duree){
+//                         telemetry.addData("FIN","FIN");
+//                         stopMoving();
+//                         if (temps > duree + 2000){
+//                             moissoneuse.setPower(0);
+//                             trieurColor.setPosition(POS_INIT_TRI);
+//                             etape = State.DEPL3;
+//                             telemetry.update();
+//                             break;
+//
+//                         }
+//                         telemetry.update();
+//                     }
+//                     colors = colorSensor.getNormalizedColors();
+//                     hue = JavaUtil.colorToHue(colors.toColor());
+//
+//                     if (100<=hue && hue<200){//Vertes
+//                         trieurColor.setPosition(1);
+//                     }
+//                     else if (200<=hue){//Violettes
+//                         trieurColor.setPosition(0);
+//                     }
+//                     else if (hue < 5) { trieurColor.setPosition(POS_INIT_TRI);}
+//                     telemetry.update();
+//                     break;
+//
+//                     case DEPL3:
+//                     translation("ARRIERE",50);
+//                     translation("DROITE",90);
+//                     if (ordre.isEmpty()){
+//                         telemetry.addData("ordre","vide");
+//                     }
+//                     else{
+//                         telemetry.addData("ordre",ordre.get(0)+ordre.get(1)+ordre.get(2));
+//                     }
+//                     telemetry.update();
+//                     etape = State.YAW;
+//                     break;
+//                 case YAW:
+//                     double yaw = 0.0;
+//                     myAprilTagDetections = (myAprilTagProcessor.getDetections());
+//                     for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                         if (myAprilTag.id == 20) {// BLEU
+//                             yaw = myAprilTag.ftcPose.yaw;
+//                         }
+//                     }
+//                     telemetry.addData("yaw",yaw);
+//                     if(Math.abs(yaw)<5){
+//                         telemetry.addData("yaw","GOTO CENTR");
+//                         stopMoving();
+//                         etape = State.CENTR;
+//
+//                     }
+//                     else{
+//                         if(yaw > 0){ //GAUCHE
+//                             vitG =  -0.25*VITESSE_MAX_MOTEUR;
+//                             vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                             telemetry.addData("direction","gauche");
+//                         }
+//                         else{
+//                             vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                             vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                             telemetry.addData("direction","droite");
+//                         }
+//                         avantDroit.setVelocity(vitD);
+//                         arriereDroit.setVelocity(vitD);
+//                         avantGauche.setVelocity(vitG);
+//                         arriereGauche.setVelocity(vitG);
+//                     }
+//                     // rotation(,);
+//                     telemetry.update();
+//                     // sleep(700);
+//                     break;
+//
+//                 case DIST:
+//                      double range = 0.0;
+//
+//                     for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                         if (myAprilTag.id == 20) {// range
+//                             range = myAprilTag.ftcPose.range*2.54-62;
+//                         }
+//                     }
+//                     telemetry.addData("range",range);
+//                     if(range >-5 & range <5){
+//                         stopMoving();
+//                         etape = State.TIR;
+//                         telemetry.addData("range","GOTO TIR");
+//                     }
+//                     else{
+//                         if(range>0){   //positif
+//                             vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                             vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                             telemetry.addData("direction","avant");
+//                         }
+//                         else{            //negatif
+//                             vitG = -0.25*VITESSE_MAX_MOTEUR;
+//                             vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                             telemetry.addData("direction","arriere");
+//                         }
+//                         avantDroit.setVelocity(vitG);
+//                         arriereDroit.setVelocity(vitD);
+//                         avantGauche.setVelocity(vitG);
+//                         arriereGauche.setVelocity(vitD);
+//                     }
+//                     telemetry.update();
+//                     // sleep(700);
+//                     break;
+//                 case CENTR:
+//                     double bearing = 0.0;
+//                     for (AprilTagDetection myAprilTag : myAprilTagDetections){
+//                         if (myAprilTag.id == 20) {// bearing
+//                             bearing = myAprilTag.ftcPose.bearing;
+//                         }
+//                     }
+//                     telemetry.addData("bearing",bearing);
+//                     if(bearing>-10 & bearing<10){
+//                         // vitesseG = 0;
+//                         // vitesseD =  0;
+//                         stopMoving();
+//                         etape = State.DIST;
+//                         telemetry.addData("bearing","GOTO DIST");
+//                     }
+//                     else{
+//                         if(bearing>0){   //positif
+//                             vitG = 0.25*VITESSE_MAX_MOTEUR;
+//                             vitD = -0.25*VITESSE_MAX_MOTEUR;
+//                             telemetry.addData("direction","gauche");
+//                         }
+//                         else{            //negatif
+//                             vitG = -0.25*VITESSE_MAX_MOTEUR;
+//                             vitD = 0.25*VITESSE_MAX_MOTEUR;
+//                             telemetry.addData("direction","droite");
+//                         }
+//                         avantDroit.setVelocity(vitG);
+//                         arriereDroit.setVelocity(vitD);
+//                         avantGauche.setVelocity(vitD);
+//                         arriereGauche.setVelocity(vitG);
+//                     }
+//                     telemetry.update();
+//                     // sleep(700);
+//                     break;
+//
+//                     case TIR :
+//                         tir(ordre);
+//                         etape = State.SUITE;
+//                         break;
+//                 case SUITE:
+//                     displayVisionPortalData();
+//                     break;
+//
+//             }
             
         
             
             
             
-        //     myAprilTagDetections = (myAprilTagProcessor.getDetections());
-        // for (AprilTagDetection myAprilTagDetection2 : myAprilTagDetections) {
-        //     myAprilTagDetection = myAprilTagDetection2;
-        //     // telemetry.addData("ID", (myAprilTagDetection.id));
-        //     if (myAprilTagDetection.id == 21){
-        //         telemetry.addData("Ordre","GPP");
-        //     }
-        //     else if (myAprilTagDetection.id == 22){
-        //         telemetry.addData("Ordre","PGP");
-        //     }
-        //     else if (myAprilTagDetection.id == 23){
-        //         telemetry.addData("Ordre","PPG");
-        //     }
-        //     else {
-        //         telemetry.addData("Ordre","Couleurs non detectées");
-        //     }
-        // }
-        // telemetry.update();
+//             myAprilTagDetections = (myAprilTagProcessor.getDetections());
+//         for (AprilTagDetection myAprilTagDetection2 : myAprilTagDetections) {
+//             myAprilTagDetection = myAprilTagDetection2;
+//             // telemetry.addData("ID", (myAprilTagDetection.id));
+//             if (myAprilTagDetection.id == 21){
+//                 telemetry.addData("Ordre","GPP");
+//             }
+//             else if (myAprilTagDetection.id == 22){
+//                 telemetry.addData("Ordre","PGP");
+//             }
+//             else if (myAprilTagDetection.id == 23){
+//                 telemetry.addData("Ordre","PPG");
+//             }
+//             else {
+//                 telemetry.addData("Ordre","Couleurs non detectées");
+//             }
+//         }
+//         telemetry.update();
     }
 }
     

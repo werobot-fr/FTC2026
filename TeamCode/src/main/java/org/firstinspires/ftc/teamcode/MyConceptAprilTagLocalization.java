@@ -70,6 +70,12 @@ public class MyConceptAprilTagLocalization extends LinearOpMode {
 
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
+
+    /**
+     * The variable to store our instance of the AprilTag processor.
+     */
+    private AprilTagProcessor aprilTag;
+
     /**
      * Variables to store the position and orientation of the camera on the robot. Setting these
      * values requires a definition of the axes of the camera and robot:
@@ -95,15 +101,9 @@ public class MyConceptAprilTagLocalization extends LinearOpMode {
      * to +/-90 degrees if it's vertical, or 180 degrees if it's upside-down.
      */
     private Position cameraPosition = new Position(DistanceUnit.CM,
-            0, 0, 0, 0);
+            0, 19.5, 43.5, 0);
     private YawPitchRollAngles cameraOrientation = new YawPitchRollAngles(AngleUnit.DEGREES,
-            0, -90, 0, 0);
-
-    /**
-     * The variable to store our instance of the AprilTag processor.
-     */
-    private AprilTagProcessor aprilTag;
-
+            0, -77, 0, 0);
     /**
      * The variable to store our instance of the vision portal.
      */
