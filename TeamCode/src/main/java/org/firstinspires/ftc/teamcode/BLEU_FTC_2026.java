@@ -28,6 +28,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagLibrary;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -58,8 +59,8 @@ public class BLEU_FTC_2026 extends LinearOpMode {
     private DcMotorEx arriereDroit = null;
     private DcMotorEx avantGauche = null;
     private DcMotorEx avantDroit = null;
-    private int VITESSE_MAX_MOTEUR = 2800; //600; // tick par seconde
-    private int VELOCITY_MAX_HEX = 600;
+    private final int VITESSE_MAX_MOTEUR = 2800; //600; // tick par seconde
+    private final int VELOCITY_MAX_HEX = 600;
     private DcMotorEx roueLanceur = null;
     private DcMotorEx moissoneuse = null;
     private NormalizedRGBA colors;
@@ -79,13 +80,13 @@ public class BLEU_FTC_2026 extends LinearOpMode {
     private double hue = 0.0;
     private double posPelle = 0.38;
     private double posViolet = 0.2;
-    private double BASPELLE = 0.56;
-    private double HAUTPELLE = 0.38;
-    private double BAS_VIOLET = 0.4;
-    private double HAUT_VIOLET = 0.5;
-    private double BAS_VERT = 0.56;
-    private double HAUT_VERT = 0.5;
-    private double POS_INIT_TRI = 0.47;
+    private final double BASPELLE = 0.56;
+    private final double HAUTPELLE = 0.38;
+    private final double BAS_VIOLET = 0.4;
+    private final double HAUT_VIOLET = 0.5;
+    private final double BAS_VERT = 0.56;
+    private final double HAUT_VERT = 0.5;
+    private final double POS_INIT_TRI = 0.47;
     private double posVert = 1;
     private double x = 0.0;
     private double y = 0.0;
@@ -104,10 +105,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
     final double MAX_AUTO_SPEED = 0.5;   //  Clip the approach speed to this max value (adjust for your robot)
     final double MAX_AUTO_STRAFE= 0.3;   //  Clip the strafing speed to this max value (adjust for your robot)
     final double MAX_AUTO_TURN  = 0.3;   //  Clip the turn speed to this max value (adjust for your robot)
-    private boolean x_OK, y_OK, z_OK;
-    
-    private ArrayList<String> ordre = new ArrayList<String>();
-    
+    private final ArrayList<String> ordre = new ArrayList<String>();
     private enum State {
         DEPL1,
         DETECT,
@@ -144,21 +142,15 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         IMUHELP,
         BEARING,
         RANGE,
-        
         SCAN_ORDRE,
         SE_PLACER,
     }
-    
     private State etape = State.SCAN_ORDRE;
     private ElapsedTime timer = new ElapsedTime();
     double temps;
-    
-    private State etape_intern = State.YAW;
-    
     public int calculDuree(double distance){
         return (int) ((distance+8.471)/48.429*1000);
     }
-    
     public void translation(String direction, double distance){
         int duree =  calculDuree(distance);
         double x,y;
@@ -187,7 +179,6 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         sleep(200);
 
     }
-    
     public void translation(double x,double y,double rTrigger){
         
             double vitesseRoueARG_avd = x* -Math.sqrt(2)/2 + y* Math.sqrt(2)/2 ;
@@ -215,7 +206,6 @@ public class BLEU_FTC_2026 extends LinearOpMode {
             avantGauche.setVelocity(vitesseRoueAVG);
             arriereGauche.setVelocity(vitesseRoueARG);
     }
-    
     public void rotation(String sens , double angle){
         imu.resetYaw();
         double theta = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
@@ -243,19 +233,15 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         }
         stopMoving();
     }
-    
-    
     public void lancerBalles(){
         servoPelle.setPosition(HAUTPELLE);
     }
-    
     public void chargerG(){
         servoPelle.setPosition(BASPELLE);
         servoVert.setPosition(HAUT_VERT);
         sleep(1234);
         servoVert.setPosition(BAS_VERT);
     }
-    
     public void chargerP(){
         servoViolet.setPosition(HAUT_VIOLET);
         sleep(987);
@@ -263,8 +249,6 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         sleep(250);
         servoViolet.setPosition(BAS_VIOLET);
     }
-    
-    
     public void initializeVisionPortal(){
         Position cameraPosition = new Position(DistanceUnit.CM,
                 0, 19.5, 43.5, 0);
@@ -277,24 +261,24 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         myVisionPortalBuilder.enableLiveView(true);
         myAprilTagProcessorBuilder = new AprilTagProcessor.Builder()
                 .setCameraPose(cameraPosition, cameraOrientation);
+        // TODO: myAprilTagProcessorBuilder.setOutputUnits(DistanceUnit.CM,AngleUnit.DEGREES);
         myAprilTagProcessor = (myAprilTagProcessorBuilder.build());
         myVisionPortalBuilder.addProcessor(myAprilTagProcessor);
         myVisionPortal = (myVisionPortalBuilder.build());
         
     }
-    
     public void displayVisionPortalData(){
         myAprilTagDetections = (myAprilTagProcessor.getDetections());
         for (AprilTagDetection myAprilTagDetection2 : myAprilTagDetections) {
             myAprilTagDetection = myAprilTagDetection2;
             telemetry.addData("ID", (myAprilTagDetection.id));
+            //TODO : à changer si ligne 280 faite
             telemetry.addData("Range", (myAprilTagDetection.ftcPose.range*2.54));
             telemetry.addData("Yaw", (myAprilTagDetection.ftcPose.yaw));
             telemetry.addData("Bearing", (myAprilTagDetection.ftcPose.bearing));
         }
         telemetry.update();
     }
-    
     public void tir(ArrayList<String> ordre){
         roueLanceur.setPower(-1); 
         sleep(2000);
@@ -305,14 +289,14 @@ public class BLEU_FTC_2026 extends LinearOpMode {
             else if (car == "P"){
                 chargerP();
             }
+            //TODO : Augmenter un peu le temps avant de lancer une balle ?
             sleep(1000);
             lancerBalles();
             sleep(1000);
         }
         roueLanceur.setPower(0);
     }
-    
-     public void moveRobot(double x, double y, double z) {
+    public void moveRobot(double x, double y, double z) {
         // Calculate wheel powers.
         double vitesseRoueAVG  =  x + y + z;
         double vitesseRoueAVD  =  -x + y - z;
@@ -339,11 +323,6 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         telemetry.addData("velocity ARD",vitesseRoueARD*VITESSE_MAX_MOTEUR);
 
      }
-    
-    
-    
-    
-    
     public void stopMoving(){
         
             avantDroit.setVelocity(0);
@@ -352,7 +331,6 @@ public class BLEU_FTC_2026 extends LinearOpMode {
             arriereGauche.setVelocity(0);
         
     }
-
 
     @Override
     public void runOpMode() {
@@ -407,9 +385,8 @@ public class BLEU_FTC_2026 extends LinearOpMode {
  
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            double vitesseRoueAVG, vitesseRoueAVD, vitesseRoueARG, vitesseRoueARD;
-
-            myAprilTagDetections = (myAprilTagProcessor.getDetections());
+//            double vitesseRoueAVG, vitesseRoueAVD, vitesseRoueARG, vitesseRoueARD;
+//            myAprilTagDetections = (myAprilTagProcessor.getDetections());
             int nbNotFound = 0;
 
             // etape = State.FIN;
@@ -452,6 +429,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
                     int nbTags = 0;
                     for (AprilTagDetection myAprilTag : myAprilTagDetections){
                         if (myAprilTag.id == 20) {
+                            //TODO : à changer si ligne 280 faite
                             double range = myAprilTag.ftcPose.range*2.54;
                             double bearing = myAprilTag.ftcPose.bearing;
                             double yaw = myAprilTag.ftcPose.yaw;
@@ -460,14 +438,13 @@ public class BLEU_FTC_2026 extends LinearOpMode {
                             z = bearing;
                             tagFound = true;
                             nbTags+=1;
-                            //break;
                         }
                     }
                     if (nbTags == 0){tagFound = false;}
                     if (tagFound) {
-                        x_OK = x > -5 && x < 5;
-                        y_OK = y > -5 && y < 5;
-                        z_OK = z > -3 && z < 3;
+                        boolean x_OK = x > -5 && x < 5;
+                        boolean y_OK = y > -5 && y < 5;
+                        boolean z_OK = z > -3 && z < 3;
                         if (x_OK && y_OK && z_OK) {
                             stopMoving();
                             etape = State.TIR;
@@ -495,6 +472,8 @@ public class BLEU_FTC_2026 extends LinearOpMode {
                         //stopMoving();
                         nbNotFound +=1;
                         moveRobot(x*0.7,y*0.7,z*0.7);
+                        //TODO : Faire "reculer le robot lentement ?" :
+                        // moveRobot(-x*0.7,-y*0.7,-z*0.7);
                     }
                     telemetry.update();
                     break;
