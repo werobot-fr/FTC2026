@@ -28,7 +28,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
-import org.firstinspires.ftc.vision.apriltag.AprilTagLibrary;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -52,7 +51,7 @@ import com.qualcomm.robotcore.util.Range;
  */
 @Autonomous
 
-public class BLEU_FTC_2026 extends LinearOpMode {
+public class BLEU_LOIN_FTC_2026 extends LinearOpMode {
 
     private IMU imu = null; 
     private DcMotorEx arriereGauche = null;
@@ -98,9 +97,9 @@ public class BLEU_FTC_2026 extends LinearOpMode {
     double vitesseRoueARD;
     
     
-    final double SPEED_GAIN  =  0.01  ;   //  Forward Speed Control "Gain". e.g. Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
-    final double STRAFE_GAIN =  0.015 ;   //  Strafe Speed Control "Gain".  e.g. Ramp up to 37% power at a 25 degree Yaw error.   (0.375 / 25.0)
-    final double TURN_GAIN   =  0.01  ;   //  Turn Control "Gain".  e.g. Ramp up to 25% power at a 25 degree error. (0.25 / 25.0)
+    final double SPEED_GAIN  =  0.002  ;   //  Forward Speed Control "Gain". e.g. Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
+    final double STRAFE_GAIN =  0.003 ;   //  Strafe Speed Control "Gain".  e.g. Ramp up to 37% power at a 25 degree Yaw error.   (0.375 / 25.0)
+    final double TURN_GAIN   =  0.002  ;   //  Turn Control "Gain".  e.g. Ramp up to 25% power at a 25 degree error. (0.25 / 25.0)
 
     final double MAX_AUTO_SPEED = 0.5;   //  Clip the approach speed to this max value (adjust for your robot)
     final double MAX_AUTO_STRAFE= 0.3;   //  Clip the strafing speed to this max value (adjust for your robot)
@@ -117,6 +116,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         YAW,
         DIST,
         CENTR,
+        SECHAPPER,
         TIR,
         FIN,
         GOTO_QR,
@@ -144,6 +144,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         RANGE,
         SCAN_ORDRE,
         SE_PLACER,
+        AVANCE,
     }
     private State etape = State.SCAN_ORDRE;
     private ElapsedTime timer = new ElapsedTime();
@@ -243,10 +244,10 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         servoVert.setPosition(BAS_VERT);
     }
     public void chargerP(){
-        servoViolet.setPosition(HAUT_VIOLET);
-        sleep(987);
         servoPelle.setPosition(BASPELLE);
         sleep(250);
+        servoViolet.setPosition(HAUT_VIOLET);
+        sleep(587);  //987
         servoViolet.setPosition(BAS_VIOLET);
     }
     public void initializeVisionPortal(){
@@ -259,8 +260,11 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         myVisionPortalBuilder = new VisionPortal.Builder();
         myVisionPortalBuilder.setCamera((hardwareMap.get(WebcamName.class, "webcam")));
         myVisionPortalBuilder.enableLiveView(true);
-        myAprilTagProcessorBuilder = new AprilTagProcessor.Builder()
-                .setCameraPose(cameraPosition, cameraOrientation);
+        myAprilTagProcessorBuilder = new AprilTagProcessor
+                .Builder()
+                .setCameraPose(cameraPosition, cameraOrientation)
+                .setOutputUnits(DistanceUnit.CM,AngleUnit.DEGREES)
+        ;
         // TODO: myAprilTagProcessorBuilder.setOutputUnits(DistanceUnit.CM,AngleUnit.DEGREES);
         myAprilTagProcessor = (myAprilTagProcessorBuilder.build());
         myVisionPortalBuilder.addProcessor(myAprilTagProcessor);
@@ -273,14 +277,14 @@ public class BLEU_FTC_2026 extends LinearOpMode {
             myAprilTagDetection = myAprilTagDetection2;
             telemetry.addData("ID", (myAprilTagDetection.id));
             //TODO : à changer si ligne 280 faite
-            telemetry.addData("Range", (myAprilTagDetection.ftcPose.range*2.54));
+            telemetry.addData("Range", (myAprilTagDetection.ftcPose.range));
             telemetry.addData("Yaw", (myAprilTagDetection.ftcPose.yaw));
             telemetry.addData("Bearing", (myAprilTagDetection.ftcPose.bearing));
         }
         telemetry.update();
     }
     public void tir(ArrayList<String> ordre){
-        roueLanceur.setPower(-1); 
+        roueLanceur.setPower(-0.75);
         sleep(2000);
         for(String car : ordre){
             if(car == "G"){
@@ -290,7 +294,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
                 chargerP();
             }
             //TODO : Augmenter un peu le temps avant de lancer une balle ?
-            sleep(1000);
+            sleep(1200);
             lancerBalles();
             sleep(1000);
         }
@@ -317,10 +321,10 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         avantDroit.setVelocity(vitesseRoueAVD*VITESSE_MAX_MOTEUR);
         arriereGauche.setVelocity(vitesseRoueARG*VITESSE_MAX_MOTEUR);
         arriereDroit.setVelocity(vitesseRoueARD*VITESSE_MAX_MOTEUR);
-        telemetry.addData("velocity AVG",vitesseRoueAVG*VITESSE_MAX_MOTEUR);
-        telemetry.addData("velocity AVD",vitesseRoueAVD*VITESSE_MAX_MOTEUR);
-        telemetry.addData("velocity ARG",vitesseRoueARG*VITESSE_MAX_MOTEUR);
-        telemetry.addData("velocity ARD",vitesseRoueARD*VITESSE_MAX_MOTEUR);
+//        telemetry.addData("velocity AVG",vitesseRoueAVG*VITESSE_MAX_MOTEUR);
+//        telemetry.addData("velocity AVD",vitesseRoueAVD*VITESSE_MAX_MOTEUR);
+//        telemetry.addData("velocity ARG",vitesseRoueARG*VITESSE_MAX_MOTEUR);
+//        telemetry.addData("velocity ARD",vitesseRoueARD*VITESSE_MAX_MOTEUR);
 
      }
     public void stopMoving(){
@@ -337,7 +341,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         
         initializeVisionPortal();
 
-        telemetry.addData("Status nouveau", "Initialized");
+        telemetry.addData("Status nouveau", "Avec recul");
         telemetry.update();
         
         avantDroit  = hardwareMap.get(DcMotorEx.class, "avantdroit");
@@ -379,7 +383,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
         servoViolet.setPosition(BAS_VIOLET);
         servoPelle.setPosition(HAUTPELLE);
         int duree = 0;
-
+        double range, yaw, bearing;
 
         waitForStart();
  
@@ -391,52 +395,57 @@ public class BLEU_FTC_2026 extends LinearOpMode {
 
             // etape = State.FIN;
 
-            switch(etape){
+            switch (etape) {
                 case SCAN_ORDRE:
                     myAprilTagDetections = (myAprilTagProcessor.getDetections());
                     for (AprilTagDetection myAprilTagDetection2 : myAprilTagDetections) {
                         myAprilTagDetection = myAprilTagDetection2;
-                          if (myAprilTagDetection.id == 21){
+                        if (myAprilTagDetection.id == 21) {
                             ordre.add("G");
                             ordre.add("P");
                             ordre.add("P");
-                            telemetry.addData("ordre","GPP");
-                          }
-                          else if (myAprilTagDetection.id == 22){
+                            telemetry.addData("ordre", "GPP");
+                        } else if (myAprilTagDetection.id == 22) {
                             ordre.add("P");
                             ordre.add("G");
                             ordre.add("P");
-                            telemetry.addData("ordre","PGP");
-                          }
-                          else if (myAprilTagDetection.id == 23){
+                            telemetry.addData("ordre", "PGP");
+                        } else if (myAprilTagDetection.id == 23) {
                             ordre.add("P");
                             ordre.add("P");
                             ordre.add("G");
-                            telemetry.addData("ordre","PPG");
-                          }
-                          else {
-                              telemetry.addData("Ordre","Couleurs non detectées");
-                          }
-                  }
-                  if (!ordre.isEmpty()){
-                        etape = State.SE_PLACER;
+                            telemetry.addData("ordre", "PPG");
+                        } else {
+                            telemetry.addData("Ordre", "Couleurs non detectées");
+                        }
+                    }
+                    if (!ordre.isEmpty()) {
+                        etape = State.AVANCE;
 
                     }
-                  telemetry.update();
-                  break;
+                    telemetry.update();
+
+                    break;
+
+                case AVANCE :
+                    translation("AVANT",100);
+                    etape = State.SE_PLACER;
+                    break;
 
                 case SE_PLACER:
                     int nbTags = 0;
-                    for (AprilTagDetection myAprilTag : myAprilTagDetections){
+                    myAprilTagDetections = (myAprilTagProcessor.getDetections());
+                    for (AprilTagDetection myAprilTag : myAprilTagDetections) {
                         if (myAprilTag.id == 20) {
                             //TODO : à changer si ligne 280 faite
-                            double range = myAprilTag.ftcPose.range*2.54;
-                            double bearing = myAprilTag.ftcPose.bearing;
-                            double yaw = myAprilTag.ftcPose.yaw;
+                            range = myAprilTag.ftcPose.range;
+                            bearing = myAprilTag.ftcPose.bearing;
+                            yaw = myAprilTag.ftcPose.yaw;
                             x = yaw;
                             y = range - 62;
                             z = bearing;
                             tagFound = true;
+                            nbNotFound = 0;
                             nbTags+=1;
                         }
                     }
@@ -450,45 +459,64 @@ public class BLEU_FTC_2026 extends LinearOpMode {
                             etape = State.TIR;
                             telemetry.addData("bleu", "Goto TIR");
                         } else {
-                            telemetry.addData("range-62",y);
-                            telemetry.addData("yaw",x);
-                            telemetry.addData("bearing",z);
-                            if (x_OK){
-                                x=0;
-                            }
-                            else {
+                            telemetry.addData("range-62", y);
+                            telemetry.addData("yaw", x);
+                            telemetry.addData("bearing", z);
+                            // telemetry.update();
+                            if (x_OK) {
+                                x = 0;
+                            } else {
                                 x = Range.clip(x * STRAFE_GAIN, -MAX_AUTO_STRAFE, MAX_AUTO_STRAFE);
                             }
-                            if (y_OK){y = 0;}
-                            else{y = Range.clip(y * SPEED_GAIN, -MAX_AUTO_SPEED, MAX_AUTO_SPEED);}
-                            if(z_OK){z=0;}
-                            else{z = Range.clip(-z * TURN_GAIN, -MAX_AUTO_TURN, MAX_AUTO_TURN);}
+                            if (y_OK) {
+                                y = 0;
+                            } else {
+                                y = Range.clip(y * SPEED_GAIN, -MAX_AUTO_SPEED, MAX_AUTO_SPEED);
+                            }
+                            if (z_OK) {
+                                z = 0;
+                            } else {
+                                z = Range.clip(-z * TURN_GAIN, -MAX_AUTO_TURN, MAX_AUTO_TURN);
+                            }
                             moveRobot(x, y, z);
                         }
 
-                    }
-                    else {
-                        telemetry.addLine("Recherche du Tag ...");
+                    } else {
+                        telemetry.addLine("Tag Perdu");
+                        telemetry.addLine(String.format("-0.3XYZ : %6.1f %6.1f %6.1f", -x * 0.3, -y * 0.3, -z * 0.3));
                         //stopMoving();
-                        nbNotFound +=1;
-                        moveRobot(x*0.7,y*0.7,z*0.7);
+                        nbNotFound += 1;
+                        //moveRobot(x*0.7,y*0.7,z*0.7);
                         //TODO : Faire "reculer le robot lentement ?" :
-                        // moveRobot(-x*0.7,-y*0.7,-z*0.7);
+                        if (nbNotFound >3) {
+                            moveRobot(-x * 0.3, -y * 0.3, -z * 0.3);
+                        }
+
                     }
-                    telemetry.update();
+                    telemetry.addData("tagFound", tagFound);
+                    //telemetry.update();
                     break;
 
                 case TIR:
                     tir(ordre);
+                    etape = State.SECHAPPER;
+                    break;
+
+                case SECHAPPER:
+                    translation("ARRIERE", 10);
+                    rotation("DROITE", 45);
+                    translation("AVANT",100);
                     etape = State.FIN;
                     break;
 
                 case FIN:
-                    telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f",x,y,z));
-                    telemetry.addData("nb not found",nbNotFound);
-                    displayVisionPortalData();
+                    telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f", x, y, z));
+                    telemetry.addData("nb not found", nbNotFound);
+                    // displayVisionPortalData();
                     break;
             }
+            telemetry.update();
+        }
             
            
             
@@ -1397,7 +1425,7 @@ public class BLEU_FTC_2026 extends LinearOpMode {
 //             }
 //         }
 //         telemetry.update();
-    }
+
 }
     
 }
