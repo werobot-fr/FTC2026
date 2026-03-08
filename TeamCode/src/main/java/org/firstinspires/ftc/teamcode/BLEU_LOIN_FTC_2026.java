@@ -97,9 +97,9 @@ public class BLEU_LOIN_FTC_2026 extends LinearOpMode {
     double vitesseRoueARD;
     
     
-    final double SPEED_GAIN  =  0.002  ;   //  Forward Speed Control "Gain". e.g. Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
+    final double SPEED_GAIN  =  0.003  ;   //  Forward Speed Control "Gain". e.g. Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
     final double STRAFE_GAIN =  0.003 ;   //  Strafe Speed Control "Gain".  e.g. Ramp up to 37% power at a 25 degree Yaw error.   (0.375 / 25.0)
-    final double TURN_GAIN   =  0.002  ;   //  Turn Control "Gain".  e.g. Ramp up to 25% power at a 25 degree error. (0.25 / 25.0)
+    final double TURN_GAIN   =  0.003  ;   //  Turn Control "Gain".  e.g. Ramp up to 25% power at a 25 degree error. (0.25 / 25.0)
 
     final double MAX_AUTO_SPEED = 0.5;   //  Clip the approach speed to this max value (adjust for your robot)
     final double MAX_AUTO_STRAFE= 0.3;   //  Clip the strafing speed to this max value (adjust for your robot)
@@ -243,18 +243,19 @@ public class BLEU_LOIN_FTC_2026 extends LinearOpMode {
         sleep(1234);
         servoVert.setPosition(BAS_VERT);
     }
+
     public void chargerP(){
         servoPelle.setPosition(BASPELLE);
         sleep(250);
         servoViolet.setPosition(HAUT_VIOLET);
-        sleep(587);  //987
+        sleep(450);  //987
         servoViolet.setPosition(BAS_VIOLET);
     }
     public void initializeVisionPortal(){
         Position cameraPosition = new Position(DistanceUnit.CM,
                 0, 19.5, 43.5, 0);
         YawPitchRollAngles cameraOrientation = new YawPitchRollAngles(AngleUnit.DEGREES,
-                0, -73, 0, 0);
+                0, -74, 0, 0);
 
 
         myVisionPortalBuilder = new VisionPortal.Builder();
