@@ -83,19 +83,21 @@ public class FTC_2026 extends LinearOpMode {
     private double POS_INIT_TRI = 0.47;
     // private double POS_TEST_TRI = 0.5;
     private double BAS_PELLE = 0.56;
-    private double HAUT_PELLE = 0.38;
+    private double HAUT_PELLE = 0.4;
     private double hue = 0.0;
 
     private double posPelle = 0.06;
     private double posViolet = 0.2;
     private double posVert = 1;
-    private double BAS_VIOLET = 0.39;
+    private double BLOCAGE_VIOLET = 0.42;
     private double COTE_TRIEUR_VERT = 1; ////////
     private double MILIEU_TRIEUR = 0.5; ///////
     private double COTE_TRIEUR_VIOLET = 0; ///////
-    private double HAUT_VIOLET = 0.52;
-    private double BAS_VERT = 0.56;
-    private double HAUT_VERT = 0.49;
+    ///
+    private double PASSAGE_VIOLET = 0.19;
+    private double BLOCAGE_VERT = 0.53;
+    private double PASSAGE_VERT = 0.8;
+    private double VITESSE_LANCEUR = 0.7;
     private boolean triAuto = true;
 
     private double triVert ;
@@ -112,6 +114,7 @@ public class FTC_2026 extends LinearOpMode {
 
     private State etapeViolet = State.Idle;
     private State etapeVert = State.Idle;
+    private State etapePelle = State.Idle;
     private ElapsedTime timer = new ElapsedTime();
 
 
@@ -166,8 +169,8 @@ public class FTC_2026 extends LinearOpMode {
         triViolet = POS_INIT_TRI;
 
         posPelle = HAUT_PELLE;
-        posVert = BAS_VERT;
-        posViolet = BAS_VIOLET;
+        posVert = BLOCAGE_VERT;
+        posViolet = BLOCAGE_VIOLET;
         servoPelle.setPosition(posPelle);
         servoViolet.setPosition(posViolet);
         servoVert.setPosition(posVert);
@@ -275,30 +278,30 @@ public class FTC_2026 extends LinearOpMode {
 
             // DEBUT SWITCH CHARGERp VIPOLET       Manette111111111
 
-            switch(etapeViolet){
-                case Idle:
-                    if(gamepad1.dpad_left){
-                        etapeViolet = State.etat2;
-                    }
-                    break;
-
-                case etat2:
-                    servoViolet.setPosition(HAUT_VIOLET);
-                    servoPelle.setPosition(BAS_PELLE);
-                    posPelle = BAS_PELLE;
-                    timer.reset();
-                    etapeViolet = State.etat3;
-                    break;
-
-                case etat3:
-                    double temps = timer.milliseconds();
-                    double attente = 400 ;
-                    if(temps>attente){
-                        servoViolet.setPosition(BAS_VIOLET);
-                        etapeViolet = State.Idle;
-                    }
-                    break;
-            }
+//            switch(etapeViolet){
+//                case Idle:
+//                    if(gamepad1.dpad_left){
+//                        etapeViolet = State.etat2;
+//                    }
+//                    break;
+//
+//                case etat2:
+//                    servoViolet.setPosition(PASSAGE_VIOLET);
+//                    servoPelle.setPosition(BAS_PELLE);
+//                    posPelle = BAS_PELLE;
+//                    timer.reset();
+//                    etapeViolet = State.etat3;
+//                    break;
+//
+//                case etat3:
+//                    double temps = timer.milliseconds();
+//                    double attente = 400 ;
+//                    if(temps>attente){
+//                        servoViolet.setPosition(BLOCAGE_VIOLET);
+//                        etapeViolet = State.Idle;
+//                    }
+//                    break;
+//            }
 
 
             //FIN SWITCH CHARGERp VIOLET           Manette11111111
@@ -306,29 +309,40 @@ public class FTC_2026 extends LinearOpMode {
 
 
             //DEBUT SWITCH CHARGER VERRT       Mannette111111111111
-            switch(etapeVert){
-                case Idle:
-                    if(gamepad1.dpad_right){
-                        etapeVert = State.etat2;
-                    }
-                    break;
+//            switch(etapeVert){
+//                case Idle:
+//                    if(gamepad1.dpad_right){
+//                        etapeVert = State.etat2;
+//                    }
+//                    break;
+//
+//                case etat2:
+//                    servoVert.setPosition(PASSAGE_VERT);
+//                    servoPelle.setPosition(BAS_PELLE);
+//                    posPelle = BAS_PELLE;
+//                    timer.reset();
+//                    etapeVert = State.etat3;
+//                    break;
+//
+//                case etat3:
+//                    double tempsVert = timer.milliseconds();
+//                    double attenteVert = 1400 ;
+//                    if(tempsVert>attenteVert){
+//                        servoVert.setPosition(BLOCAGE_VERT);
+//                        etapeVert = State.Idle;
+//                    }
+//                    break;
+//            }
 
-                case etat2:
-                    servoVert.setPosition(HAUT_VERT);
-                    servoPelle.setPosition(BAS_PELLE);
-                    posPelle = BAS_PELLE;
-                    timer.reset();
-                    etapeVert = State.etat3;
-                    break;
-
-                case etat3:
-                    double tempsVert = timer.milliseconds();
-                    double attenteVert = 1400 ;
-                    if(tempsVert>attenteVert){
-                        servoVert.setPosition(BAS_VERT);
-                        etapeVert = State.Idle;
-                    }
-                    break;
+            if (gamepad1.dpadLeftWasPressed()){
+                servoViolet.setPosition(PASSAGE_VIOLET);
+                servoPelle.setPosition(BAS_PELLE);
+                posPelle = BAS_PELLE;
+            }
+            if (gamepad1.dpadRightWasPressed()){
+                servoVert.setPosition(PASSAGE_VERT);
+                servoPelle.setPosition(BAS_PELLE);
+                posPelle = BAS_PELLE;
             }
             //FIN SWITCH CHARGER VERT        Manette11111111111
 
@@ -371,24 +385,22 @@ public class FTC_2026 extends LinearOpMode {
 
             // DEBUT ROUE LANCEUR   Manette 11111111
 
-            if(gamepad1.circle){
-                if(!circleLanceurAlreadyPressed){
-                    circleLanceurAlreadyPressed = true;
+            if(gamepad1.circleWasPressed()){
+//                if(!circleLanceurAlreadyPressed){
+//                    circleLanceurAlreadyPressed = true;
                     if (lanceurON){
                         roueLanceur2.setPower(0);
                         roueLanceur.setPower(0);
                         lanceurON = false;
                     }
                     else {
-                        roueLanceur.setPower(-1);       //BATERIE 12,à 1, 58 cm
-                        roueLanceur2.setPower(1);      //BATERIE 12,à 0.9, 60 cm
+                        roueLanceur.setPower(-VITESSE_LANCEUR);       //BATERIE 12,à 1, 58 cm
+                        roueLanceur2.setPower(VITESSE_LANCEUR);      //BATERIE 12,à 0.9, 60 cm
                         lanceurON = true;
                     }
-                }
+
             }
-            else if (!gamepad2.circle){
-                circleLanceurAlreadyPressed = false;
-            }
+
 
             // FIN ROUE LANCEUR    Manette 11111111111
 
@@ -455,10 +467,40 @@ public class FTC_2026 extends LinearOpMode {
 //                trianglePelleAlreadyPressed = false;
 //            }
 
-            if (gamepad1.triangleWasPressed()){
-                if (posPelle != HAUT_PELLE){posPelle = HAUT_PELLE;}
-                else {posPelle = BAS_PELLE;}
-                servoPelle.setPosition(posPelle);
+//            if (gamepad1.triangleWasPressed()){
+//                if (posPelle != HAUT_PELLE){posPelle = HAUT_PELLE;}
+//                else {posPelle = BAS_PELLE;}
+//                servoPelle.setPosition(posPelle);
+//            }
+            switch (etapePelle){
+                case Idle:
+                    if (gamepad1.triangleWasPressed()){
+                        if (posPelle == BAS_PELLE) {
+                            etapePelle = State.etat2;
+                        }
+                        else {
+                            posPelle = BAS_PELLE;
+                            servoPelle.setPosition(BAS_PELLE);
+                        }
+
+                    }
+                    break;
+                case etat2:
+                    servoViolet.setPosition(BLOCAGE_VIOLET);
+                    servoVert.setPosition(BLOCAGE_VERT);
+                    timer.reset();
+                    etapePelle = State.etat3;
+                    break;
+
+                case etat3:
+                    double tempsPelle = timer.milliseconds();
+                    double attentePelle = 1000 ;
+                    if(tempsPelle>attentePelle){
+                        servoPelle.setPosition(HAUT_PELLE);
+                        posPelle = HAUT_PELLE;
+                        etapePelle = State.Idle;
+                    }
+                    break;
             }
 
             // FIN AUTO CATAPULTE          Manette    11111111111111
@@ -532,8 +574,8 @@ public class FTC_2026 extends LinearOpMode {
 
             // if (gamepad1.dpad_left && ! leftVioletAlreadyPressed){
             //     leftVioletAlreadyPressed = true;
-            //     if (posViolet != HAUT_VIOLET){posViolet = HAUT_VIOLET;}
-            //     else {posViolet = BAS_VIOLET;}
+            //     if (posViolet != PASSAGE_VIOLET){posViolet = PASSAGE_VIOLET;}
+            //     else {posViolet = BLOCAGE_VIOLET;}
             //     servoViolet.setPosition(posViolet);
             // }
             // else if (!gamepad1.dpad_left){
@@ -546,8 +588,8 @@ public class FTC_2026 extends LinearOpMode {
 
             // if (gamepad1.dpad_right && ! rightVertAlreadyPressed){
             //     rightVertAlreadyPressed = true;
-            //     if (posVert != HAUT_VERT){posVert = HAUT_VERT;}
-            //     else {posVert = BAS_VERT;}
+            //     if (posVert != PASSAGE_VERT){posVert = PASSAGE_VERT;}
+            //     else {posVert = BLOCAGE_VERT;}
             //     servoVert.setPosition(posVert);
             // }
             // else if (!gamepad1.dpad_right){
