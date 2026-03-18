@@ -450,7 +450,7 @@ public class ROUGE_LOIN_FTC_2026 extends LinearOpMode {
                     int nbTags = 0;
                     myAprilTagDetections = (myAprilTagProcessor.getDetections());
                     for (AprilTagDetection myAprilTag : myAprilTagDetections) {
-                        if (myAprilTag.id == 21) {
+                        if (myAprilTag.id == 24) {
                             //TODO : à changer si ligne 280 faite
                             range = myAprilTag.ftcPose.range;
                             bearing = myAprilTag.ftcPose.bearing;
