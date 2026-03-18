@@ -412,7 +412,7 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
 
             switch (etape) {
                 case RECULE :
-                    translation("ARRIERE",70);
+                    translation("ARRIERE",DISTANCE_RANGE);
                     etape = State.SE_PLACER;
                     break;
 
@@ -420,7 +420,7 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
                     int nbTags = 0;
                     myAprilTagDetections = (myAprilTagProcessor.getDetections());
                     for (AprilTagDetection myAprilTag : myAprilTagDetections) {
-                        if (myAprilTag.id == 20) {
+                        if (myAprilTag.id == 24) {
                             //TODO : à changer si ligne 280 faite
                             range = myAprilTag.ftcPose.range;
                             bearing = myAprilTag.ftcPose.bearing;
