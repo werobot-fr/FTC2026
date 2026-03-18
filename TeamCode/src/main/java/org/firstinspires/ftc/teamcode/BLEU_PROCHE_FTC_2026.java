@@ -412,7 +412,7 @@ public class BLEU_PROCHE_FTC_2026 extends LinearOpMode {
 
             switch (etape) {
                 case RECULE :
-                    translation("ARRIERE",80);
+                    translation("ARRIERE",DISTANCE_RANGE);
                     etape = State.SE_PLACER;
                     break;
 
