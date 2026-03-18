@@ -98,7 +98,7 @@ public class FTC_2026 extends LinearOpMode {
     private double PASSAGE_VIOLET = 0.19;
     private double BLOCAGE_VERT = 0.53;
     private double PASSAGE_VERT = 0.8;
-    private double VITESSE_LANCEUR = 0.5;
+    private double VITESSE_LANCEUR = 0.7;
     private boolean triAuto = true;
 
     private double triVert ;
