@@ -36,6 +36,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 @TeleOp
 
@@ -97,7 +98,7 @@ public class FTC_2026 extends LinearOpMode {
     private double PASSAGE_VIOLET = 0.19;
     private double BLOCAGE_VERT = 0.53;
     private double PASSAGE_VERT = 0.8;
-    private double VITESSE_LANCEUR = 0.7;
+    private double VITESSE_LANCEUR = 0.5;
     private boolean triAuto = true;
 
     private double triVert ;
@@ -117,6 +118,8 @@ public class FTC_2026 extends LinearOpMode {
     private State etapePelle = State.Idle;
     private ElapsedTime timer = new ElapsedTime();
 
+    private VoltageSensor batterie;
+
 
     // private float r,g,b;
 
@@ -126,8 +129,10 @@ public class FTC_2026 extends LinearOpMode {
     public void runOpMode() {
 
         telemetry.addData("Status_nouvaeu", "Initialized");
-        telemetry.update();
 
+
+        batterie = hardwareMap.get(VoltageSensor.class, "Control Hub");
+        telemetry.addData("batterie",batterie.getVoltage());
         avantDroit  = hardwareMap.get(DcMotorEx.class, "avantdroit");
         avantGauche  = hardwareMap.get(DcMotorEx.class, "avantgauche");
         arriereDroit = hardwareMap.get(DcMotorEx.class, "arrieredroit");
@@ -141,6 +146,8 @@ public class FTC_2026 extends LinearOpMode {
         servoPelle = hardwareMap.get(Servo.class, "servopelle");
         colorSensor = hardwareMap.get(NormalizedColorSensor.class, "colorSensor");
         imu = hardwareMap.get(IMU.class, "imu");
+
+        telemetry.update();
 
         RevHubOrientationOnRobot.LogoFacingDirection logo = RevHubOrientationOnRobot.LogoFacingDirection.UP;
         RevHubOrientationOnRobot.UsbFacingDirection usb = RevHubOrientationOnRobot.UsbFacingDirection.RIGHT;
