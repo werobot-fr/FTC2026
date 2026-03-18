@@ -28,7 +28,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
-import org.firstinspires.ftc.vision.apriltag.AprilTagLibrary;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -39,6 +38,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+
 
 /**
  * This file contains a minimal example of a Linear "OpMode". An OpMode is a 'program' that runs
@@ -62,6 +62,7 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
     private final int VITESSE_MAX_MOTEUR = 2800; //600; // tick par seconde
     private final int VELOCITY_MAX_HEX = 600;
     private DcMotorEx roueLanceur = null;
+    private DcMotorEx roueLanceur2 = null;
     private DcMotorEx moissoneuse = null;
     private NormalizedRGBA colors;
     private NormalizedColorSensor colorSensor = null;
@@ -81,13 +82,14 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
     private double posPelle = 0.38;
     private double posViolet = 0.2;
     private final double BASPELLE = 0.56;
-    private final double HAUTPELLE = 0.38;
-    private final double BAS_VIOLET = 0.4;
-    private final double HAUT_VIOLET = 0.5;
-    private final double BAS_VERT = 0.56;
-    private final double HAUT_VERT = 0.5;
+    private final double HAUTPELLE = 0.4;
+    private final double BLOCAGE_VIOLET = 0.42;  //39
+    private final double PASSAGE_VIOLET = 0.19;
+    private final double BLOCAGE_VERT = 0.53; //56
+    private final double PASSAGE_VERT = 0.8;
+    private double VITESSE_LANCEUR = 0.7;
     private final double POS_INIT_TRI = 0.47;
-    private double posVert = 1;
+    private double DISTANCE_RANGE = 110; //95  //62    private double posVert = 1;
     private double x = 0.0;
     private double y = 0.0;
     private double z = 0.0;
@@ -98,9 +100,9 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
     double vitesseRoueARD;
 
 
-    final double SPEED_GAIN  =  0.002  ;   //  Forward Speed Control "Gain". e.g. Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
+    final double SPEED_GAIN  =  0.003  ;   //  Forward Speed Control "Gain". e.g. Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
     final double STRAFE_GAIN =  0.003 ;   //  Strafe Speed Control "Gain".  e.g. Ramp up to 37% power at a 25 degree Yaw error.   (0.375 / 25.0)
-    final double TURN_GAIN   =  0.002  ;   //  Turn Control "Gain".  e.g. Ramp up to 25% power at a 25 degree error. (0.25 / 25.0)
+    final double TURN_GAIN   =  0.004  ;   //  Turn Control "Gain".  e.g. Ramp up to 25% power at a 25 degree error. (0.25 / 25.0)
 
     final double MAX_AUTO_SPEED = 0.5;   //  Clip the approach speed to this max value (adjust for your robot)
     final double MAX_AUTO_STRAFE= 0.3;   //  Clip the strafing speed to this max value (adjust for your robot)
@@ -143,10 +145,10 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
         IMUHELP,
         BEARING,
         RANGE,
-        RECULE,
         SCAN_ORDRE,
         SE_PLACER,
         AVANCE,
+        RECULE,
     }
     private State etape = State.RECULE;
     private ElapsedTime timer = new ElapsedTime();
@@ -154,8 +156,9 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
     public int calculDuree(double distance){
         return (int) ((distance+8.471)/48.429*1000);
     }
-    public void translation(String direction, double distance){
-        int duree =  calculDuree(distance);
+    public void translation(String direction, double distance, double trigger){
+        double CM = trigger/0.25;
+        int duree =  calculDuree(distance/CM);
         double x,y;
         if (direction == "AVANT"){
             x = 0;
@@ -176,11 +179,15 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
         else {
             return;
         }
-        translation(x,y,0.25);
+        translation(x,y,trigger);
         sleep(duree);
         stopMoving();
         sleep(200);
 
+    }
+
+    public void translation(String direction, double distance ){
+        translation(direction,distance,0.25);
     }
     public void translation(double x,double y,double rTrigger){
 
@@ -237,26 +244,30 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
         stopMoving();
     }
     public void lancerBalles(){
+        servoVert.setPosition(BLOCAGE_VERT);
+        servoViolet.setPosition(BLOCAGE_VIOLET);
+        sleep(1250);
         servoPelle.setPosition(HAUTPELLE);
+
+
     }
     public void chargerG(){
         servoPelle.setPosition(BASPELLE);
-        servoVert.setPosition(HAUT_VERT);
-        sleep(1234);
-        servoVert.setPosition(BAS_VERT);
+        servoVert.setPosition(PASSAGE_VERT);
+        sleep(750);
     }
+
     public void chargerP(){
         servoPelle.setPosition(BASPELLE);
-        sleep(250);
-        servoViolet.setPosition(HAUT_VIOLET);
-        sleep(587);  //987
-        servoViolet.setPosition(BAS_VIOLET);
+        servoViolet.setPosition(PASSAGE_VIOLET);
+        sleep(750);  //987
+
     }
     public void initializeVisionPortal(){
         Position cameraPosition = new Position(DistanceUnit.CM,
                 0, 19.5, 43.5, 0);
         YawPitchRollAngles cameraOrientation = new YawPitchRollAngles(AngleUnit.DEGREES,
-                0, -73, 0, 0);
+                0, -74, 0, 0);
 
 
         myVisionPortalBuilder = new VisionPortal.Builder();
@@ -286,7 +297,8 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
         telemetry.update();
     }
     public void tir(ArrayList<String> ordre){
-        roueLanceur.setPower(-0.75);
+        roueLanceur.setPower(-VITESSE_LANCEUR);
+        roueLanceur2.setPower(VITESSE_LANCEUR);
         sleep(2000);
         for(String car : ordre){
             if(car == "G"){
@@ -296,11 +308,11 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
                 chargerP();
             }
             //TODO : Augmenter un peu le temps avant de lancer une balle ?
-            sleep(1200);
             lancerBalles();
             sleep(1000);
         }
         roueLanceur.setPower(0);
+        roueLanceur2.setPower(0);
     }
     public void moveRobot(double x, double y, double z) {
         // Calculate wheel powers.
@@ -351,6 +363,7 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
         arriereDroit = hardwareMap.get(DcMotorEx.class, "arrieredroit");
         arriereGauche = hardwareMap.get(DcMotorEx.class, "arrieregauche");
         roueLanceur =  hardwareMap.get(DcMotorEx.class, "motorlanceur");
+        roueLanceur2 =  hardwareMap.get(DcMotorEx.class, "motorlanceur2");
         moissoneuse = hardwareMap.get(DcMotorEx.class, "moissoneuse");
         trieurColor = hardwareMap.get(Servo.class, "ejecttrieur");
         servoViolet = hardwareMap.get(Servo.class, "servoviolet");
@@ -381,8 +394,8 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
         imu.resetYaw();
 
         // Wait for the game to start (driver presses PLAY)
-        servoVert.setPosition(BAS_VERT);
-        servoViolet.setPosition(BAS_VIOLET);
+        servoVert.setPosition(BLOCAGE_VERT);
+        servoViolet.setPosition(BLOCAGE_VIOLET);
         servoPelle.setPosition(HAUTPELLE);
         int duree = 0;
         double range, yaw, bearing;
@@ -413,7 +426,7 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
                             bearing = myAprilTag.ftcPose.bearing;
                             yaw = myAprilTag.ftcPose.yaw;
                             x = yaw;
-                            y = range - 62;
+                            y = range - DISTANCE_RANGE;
                             z = bearing;
                             tagFound = true;
                             nbNotFound = 0;
@@ -430,7 +443,7 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
                             etape = State.TIR;
                             telemetry.addData("bleu", "Goto TIR");
                         } else {
-                            telemetry.addData("range-62", y);
+                            telemetry.addData("range-DISTANCE_RANGE", y);
                             telemetry.addData("yaw", x);
                             telemetry.addData("bearing", z);
                             // telemetry.update();
@@ -479,8 +492,8 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
 
                 case SECHAPPER :  // valeur à voir (10 & 100)
                     translation("ARRIERE", 10);
-                    rotation("GAUCHE", 45);
-                    translation("AVANT",100);
+                    rotation("DROITE", 45);
+                    translation("AVANT",90);
                     etape = State.FIN;
                     break;
 
@@ -492,6 +505,10 @@ public class ROUGE_PROCHE_FTC_2026 extends LinearOpMode {
             }
             telemetry.update();
         }
+
+
+
+
 
 
     }
